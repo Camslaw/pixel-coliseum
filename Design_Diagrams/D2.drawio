@@ -1,0 +1,144 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36" version="28.2.3">
+  <diagram name="Page-1" id="j8zkVQ6v6HRnF_IF4WwY">
+    <mxGraphModel dx="1018" dy="633" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="DHYCz6EOC8wieBjTlNJv-1" value="&lt;p style=&quot;margin-top: 0px;&quot;&gt;&lt;font&gt;&lt;font style=&quot;&quot;&gt;&lt;font style=&quot;&quot;&gt;&lt;b style=&quot;&quot;&gt;D2:&amp;nbsp;&lt;/b&gt;&lt;/font&gt;&lt;/font&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;The D2 diagram provides a more detailed view of the Pixel Coliseum architecture by breaking down each high-level module into its main components. The &lt;/span&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot; data-end=&quot;289&quot; data-start=&quot;269&quot;&gt;Front-end Client&lt;/span&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt; handles input, rendering, network communication, and HUD overlay for player interaction. The &lt;/span&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot; data-end=&quot;407&quot; data-start=&quot;383&quot;&gt;Realtime Game Server&lt;/span&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt; manages core gameplay logic, chat relay, room/session handling, and the authoritative game loop. The &lt;/span&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot; data-is-only-node=&quot;&quot; data-end=&quot;522&quot; data-start=&quot;509&quot;&gt;AI Module&lt;/span&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt; contributes bot behavior through perception, decision logic, and action emission, while the &lt;/span&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot; data-end=&quot;633&quot; data-start=&quot;615&quot;&gt;Metrics Output&lt;/span&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt; module reports performance data such as tick times, round-trip latency, and player/room statistics. The &lt;/span&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot; data-end=&quot;756&quot; data-start=&quot;738&quot;&gt;Database Layer&lt;/span&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt; is responsible for writing match results, retrieving player profiles, serving leaderboard data, and managing database access. Finally, the &lt;/span&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot; data-end=&quot;919&quot; data-start=&quot;896&quot;&gt;PostgreSQL Database&lt;/span&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt; stores persistent data in dedicated tables for matches, match player statistics, leaderboards, and optional chat logs.&lt;/span&gt;&lt;/font&gt;&lt;/p&gt;" style="text;html=1;whiteSpace=wrap;overflow=hidden;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="11" y="30" width="828.5" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="DHYCz6EOC8wieBjTlNJv-2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;endArrow=classic;endFill=1;startArrow=classic;startFill=1;" parent="1" source="DHYCz6EOC8wieBjTlNJv-3" target="DHYCz6EOC8wieBjTlNJv-7" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="DHYCz6EOC8wieBjTlNJv-3" value="" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="124" y="140" width="150" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="DHYCz6EOC8wieBjTlNJv-4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;startArrow=classic;startFill=1;" parent="1" source="DHYCz6EOC8wieBjTlNJv-7" target="DHYCz6EOC8wieBjTlNJv-10" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="DHYCz6EOC8wieBjTlNJv-5" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="DHYCz6EOC8wieBjTlNJv-7" target="DHYCz6EOC8wieBjTlNJv-13" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="DHYCz6EOC8wieBjTlNJv-6" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;endArrow=classic;endFill=1;startArrow=classic;startFill=1;" parent="1" source="DHYCz6EOC8wieBjTlNJv-7" target="DHYCz6EOC8wieBjTlNJv-14" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="DHYCz6EOC8wieBjTlNJv-7" value="" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="294" y="140" width="180" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="DHYCz6EOC8wieBjTlNJv-8" value="" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="696" y="140" width="150" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="DHYCz6EOC8wieBjTlNJv-9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;endArrow=classic;endFill=1;startArrow=classic;startFill=1;" parent="1" source="DHYCz6EOC8wieBjTlNJv-10" target="DHYCz6EOC8wieBjTlNJv-8" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="DHYCz6EOC8wieBjTlNJv-10" value="&lt;span style=&quot;color: rgba(0, 0, 0, 0); font-family: monospace; font-size: 0px; text-align: start; text-wrap-mode: nowrap;&quot;&gt;%3CmxGraphModel%3E%3Croot%3E%3CmxCell%20id%3D%220%22%2F%3E%3CmxCell%20id%3D%221%22%20parent%3D%220%22%2F%3E%3CmxCell%20id%3D%222%22%20value%3D%22Player%20Profile%20Service%22%20style%3D%22shape%3Dhexagon%3Bperimeter%3DhexagonPerimeter2%3BwhiteSpace%3Dwrap%3Bhtml%3D1%3BfixedSize%3D1%3B%22%20vertex%3D%221%22%20parent%3D%221%22%3E%3CmxGeometry%20x%3D%22550%22%20y%3D%22245%22%20width%3D%22160%22%20height%3D%2230%22%20as%3D%22geometry%22%2F%3E%3C%2FmxCell%3E%3C%2Froot%3E%3C%2FmxGraphModel%3E&lt;/span&gt;" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="494" y="140" width="180" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="DHYCz6EOC8wieBjTlNJv-11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;endArrow=classic;endFill=1;startArrow=classic;startFill=1;" parent="1" target="DHYCz6EOC8wieBjTlNJv-3" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="104" y="250" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="DHYCz6EOC8wieBjTlNJv-12" value="Player/browser interaction" style="ellipse;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="4" y="210" width="100" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="DHYCz6EOC8wieBjTlNJv-13" value="" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="413.5" y="380" width="140" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="DHYCz6EOC8wieBjTlNJv-14" value="" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="223.5" y="380" width="150" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-1" value="Input Handler" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
+          <mxGeometry x="139" y="200" width="120" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-2" value="&lt;b&gt;Front-end client&lt;/b&gt;&lt;div&gt;&lt;b&gt;(TypeScript + Phaser 3)&lt;/b&gt;&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
+          <mxGeometry x="119" y="150" width="160" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-3" value="Network Client" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
+          <mxGeometry x="139" y="235" width="120" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-4" value="Game Renderer" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
+          <mxGeometry x="139" y="275" width="120" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-5" value="HUD Overlay" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
+          <mxGeometry x="139" y="315" width="120" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-6" value="&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;room/session manager&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
+          <mxGeometry x="306" y="280" width="157" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-7" value="&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;game loop/tick system&lt;/span&gt;&lt;/div&gt;" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
+          <mxGeometry x="310" y="320" width="157" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-8" value="gameplay logic" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
+          <mxGeometry x="306" y="200" width="157" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-9" value="&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;chat relay&lt;/span&gt;&lt;/div&gt;" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
+          <mxGeometry x="306" y="240" width="157" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-10" value="&lt;b&gt;Realtime game server&lt;/b&gt;&lt;div&gt;&lt;b&gt;(Node.js + Colyseus)&lt;/b&gt;&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
+          <mxGeometry x="306" y="150" width="150" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-11" value="&lt;b&gt;Database Layer&lt;/b&gt;&lt;div&gt;&lt;b&gt;Communicates with the DB&lt;/b&gt;&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
+          <mxGeometry x="494" y="145" width="180" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-12" value="&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;Match Result Writer&lt;/span&gt;&lt;/div&gt;" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
+          <mxGeometry x="504" y="195" width="157" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-13" value="Player Profile Service" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
+          <mxGeometry x="504" y="235" width="160" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-14" value="Leaderboard Service" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
+          <mxGeometry x="504" y="270" width="160" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-15" value="DB Access" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
+          <mxGeometry x="504" y="310" width="160" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-16" value="Perception" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
+          <mxGeometry x="236.5" y="425" width="120" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-17" value="decision logic" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
+          <mxGeometry x="236.5" y="465" width="120" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-18" value="Action emitter" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
+          <mxGeometry x="236.5" y="510" width="120" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-20" value="&lt;b&gt;AI Module&lt;/b&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
+          <mxGeometry x="258.5" y="390" width="80" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-21" value="tick time reporting" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
+          <mxGeometry x="425.5" y="425" width="120" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-22" value="round trip time reporting" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
+          <mxGeometry x="423.5" y="465" width="120" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-23" value="players/rooms information" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
+          <mxGeometry x="425.5" y="510" width="120" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-24" value="&lt;b&gt;Metrics Output&lt;/b&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
+          <mxGeometry x="430.5" y="390" width="110" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-25" value="&lt;b&gt;PostgreSQL DB&lt;/b&gt;&lt;div&gt;Potential tables:&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
+          <mxGeometry x="716" y="140" width="110" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-26" value="matches" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
+          <mxGeometry x="711" y="185" width="120" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-27" value="match_players (statistics)" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
+          <mxGeometry x="711" y="225" width="120" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-28" value="leaderboards" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
+          <mxGeometry x="711" y="270" width="120" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-29" value="match_chat" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
+          <mxGeometry x="711" y="315" width="120" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-30" value="Network Client" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
+          <mxGeometry x="139" y="235" width="120" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="kKrquH4sbDhZLVU-ndAC-1" value="" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="1127" y="300" width="120" height="60" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
