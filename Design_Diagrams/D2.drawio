@@ -48,7 +48,7 @@
         <mxCell id="DHYCz6EOC8wieBjTlNJv-14" value="" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
           <mxGeometry x="223.5" y="380" width="150" height="180" as="geometry" />
         </mxCell>
-        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-1" value="Input Handler" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
+        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-1" value="Input handler" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
           <mxGeometry x="139" y="200" width="120" height="30" as="geometry" />
         </mxCell>
         <mxCell id="aA6Dl_ZG2p95WVv3GfOX-2" value="&lt;b&gt;Front-end client&lt;/b&gt;&lt;div&gt;&lt;b&gt;(TypeScript + Phaser 3)&lt;/b&gt;&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
@@ -57,22 +57,22 @@
         <mxCell id="aA6Dl_ZG2p95WVv3GfOX-3" value="Network Client" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
           <mxGeometry x="139" y="235" width="120" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-4" value="Game Renderer" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
+        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-4" value="Game renderer" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
           <mxGeometry x="139" y="275" width="120" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-5" value="HUD Overlay" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
+        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-5" value="HUD overlay" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
           <mxGeometry x="139" y="315" width="120" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-6" value="&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;room/session manager&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
+        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-6" value="&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Room/session manager&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
           <mxGeometry x="306" y="280" width="157" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-7" value="&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;game loop/tick system&lt;/span&gt;&lt;/div&gt;" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
+        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-7" value="&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;Game loop/tick system&lt;/span&gt;&lt;/div&gt;" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
           <mxGeometry x="310" y="320" width="157" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-8" value="gameplay logic" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
+        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-8" value="Gameplay logic" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
           <mxGeometry x="306" y="200" width="157" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-9" value="&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;chat relay&lt;/span&gt;&lt;/div&gt;" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
+        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-9" value="&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;Chat relay&lt;/span&gt;&lt;/div&gt;" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
           <mxGeometry x="306" y="240" width="157" height="30" as="geometry" />
         </mxCell>
         <mxCell id="aA6Dl_ZG2p95WVv3GfOX-10" value="&lt;b&gt;Realtime game server&lt;/b&gt;&lt;div&gt;&lt;b&gt;(Node.js + Colyseus)&lt;/b&gt;&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
@@ -81,22 +81,22 @@
         <mxCell id="aA6Dl_ZG2p95WVv3GfOX-11" value="&lt;b&gt;Database Layer&lt;/b&gt;&lt;div&gt;&lt;b&gt;Communicates with the DB&lt;/b&gt;&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
           <mxGeometry x="494" y="145" width="180" height="40" as="geometry" />
         </mxCell>
-        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-12" value="&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;Match Result Writer&lt;/span&gt;&lt;/div&gt;" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
+        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-12" value="&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;Match result writer&lt;/span&gt;&lt;/div&gt;" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
           <mxGeometry x="504" y="195" width="157" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-13" value="Player Profile Service" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
+        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-13" value="Player profile service" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
           <mxGeometry x="504" y="235" width="160" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-14" value="Leaderboard Service" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
+        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-14" value="Leaderboard service" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
           <mxGeometry x="504" y="270" width="160" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-15" value="DB Access" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
+        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-15" value="DB access" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
           <mxGeometry x="504" y="310" width="160" height="30" as="geometry" />
         </mxCell>
         <mxCell id="aA6Dl_ZG2p95WVv3GfOX-16" value="Perception" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
           <mxGeometry x="236.5" y="425" width="120" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-17" value="decision logic" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
+        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-17" value="Decision logic" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
           <mxGeometry x="236.5" y="465" width="120" height="30" as="geometry" />
         </mxCell>
         <mxCell id="aA6Dl_ZG2p95WVv3GfOX-18" value="Action emitter" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
@@ -105,13 +105,13 @@
         <mxCell id="aA6Dl_ZG2p95WVv3GfOX-20" value="&lt;b&gt;AI Module&lt;/b&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
           <mxGeometry x="258.5" y="390" width="80" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-21" value="tick time reporting" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
+        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-21" value="Tick time reporting" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
           <mxGeometry x="425.5" y="425" width="120" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-22" value="round trip time reporting" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
+        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-22" value="Round trip time reporting" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
           <mxGeometry x="423.5" y="465" width="120" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-23" value="players/rooms information" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
+        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-23" value="Players/rooms information" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
           <mxGeometry x="425.5" y="510" width="120" height="30" as="geometry" />
         </mxCell>
         <mxCell id="aA6Dl_ZG2p95WVv3GfOX-24" value="&lt;b&gt;Metrics Output&lt;/b&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
@@ -132,10 +132,10 @@
         <mxCell id="aA6Dl_ZG2p95WVv3GfOX-29" value="match_chat" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
           <mxGeometry x="711" y="315" width="120" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-30" value="Network Client" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
+        <mxCell id="aA6Dl_ZG2p95WVv3GfOX-30" value="Network client" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
           <mxGeometry x="139" y="235" width="120" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="kKrquH4sbDhZLVU-ndAC-1" value="" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+        <mxCell id="kKrquH4sbDhZLVU-ndAC-1" value="" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
           <mxGeometry x="1127" y="300" width="120" height="60" as="geometry" />
         </mxCell>
       </root>
