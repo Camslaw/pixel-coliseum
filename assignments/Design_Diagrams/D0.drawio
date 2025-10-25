@@ -1,4 +1,4 @@
-<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36" version="28.2.3">
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36" version="28.2.5">
   <diagram name="Page-1" id="WxGkRKSv5kf-lFZOpKAl">
     <mxGraphModel dx="1018" dy="633" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
       <root>
@@ -25,7 +25,7 @@
             <mxPoint x="340" y="334.5" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="n21BklcHMmTwbdA0G5cs-8" value="Opponent actions (network)" style="edgeLabel;resizable=0;html=1;;align=center;verticalAlign=middle;" parent="n21BklcHMmTwbdA0G5cs-7" connectable="0" vertex="1">
+        <mxCell id="n21BklcHMmTwbdA0G5cs-8" value="Teammate actions (network)" style="edgeLabel;resizable=0;html=1;;align=center;verticalAlign=middle;" parent="n21BklcHMmTwbdA0G5cs-7" connectable="0" vertex="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="n21BklcHMmTwbdA0G5cs-9" value="" style="endArrow=classic;html=1;rounded=0;" parent="1" edge="1">
@@ -34,7 +34,7 @@
             <mxPoint x="340" y="390" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="n21BklcHMmTwbdA0G5cs-10" value="AI logic" style="edgeLabel;resizable=0;html=1;;align=center;verticalAlign=middle;" parent="n21BklcHMmTwbdA0G5cs-9" connectable="0" vertex="1">
+        <mxCell id="n21BklcHMmTwbdA0G5cs-10" value="AI/Opponent logic" style="edgeLabel;resizable=0;html=1;;align=center;verticalAlign=middle;" parent="n21BklcHMmTwbdA0G5cs-9" connectable="0" vertex="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="n21BklcHMmTwbdA0G5cs-11" value="" style="endArrow=classic;html=1;rounded=0;" parent="1" edge="1">

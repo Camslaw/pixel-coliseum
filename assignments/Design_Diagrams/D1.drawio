@@ -1,0 +1,60 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36" version="28.2.8">
+  <diagram name="Page-1" id="jZduB9S6t1IZREcf_3mA">
+    <mxGraphModel dx="1018" dy="633" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="F8s0xCzP0n8E7-uNUlLd-16" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;endArrow=classic;endFill=1;startArrow=classic;startFill=1;" parent="1" source="F8s0xCzP0n8E7-uNUlLd-1" target="F8s0xCzP0n8E7-uNUlLd-3" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="F8s0xCzP0n8E7-uNUlLd-1" value="Frontend client&lt;div&gt;(TypeScript + Phaser 3)&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="180" y="240" width="140" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="F8s0xCzP0n8E7-uNUlLd-17" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;startArrow=classic;startFill=1;" parent="1" source="F8s0xCzP0n8E7-uNUlLd-3" target="F8s0xCzP0n8E7-uNUlLd-6" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="F8s0xCzP0n8E7-uNUlLd-25" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="42EzQfms3-F54Jbbl0Hv-2" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="510" y="360" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="F8s0xCzP0n8E7-uNUlLd-29" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;endArrow=classic;endFill=1;startArrow=classic;startFill=1;" parent="1" source="F8s0xCzP0n8E7-uNUlLd-3" target="42EzQfms3-F54Jbbl0Hv-1" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="F8s0xCzP0n8E7-uNUlLd-3" value="Realtime game server&lt;div&gt;(Node.js + Colyseus)&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="350" y="240" width="140" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="F8s0xCzP0n8E7-uNUlLd-5" value="PostgreSQL DB" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="670" y="240" width="140" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="F8s0xCzP0n8E7-uNUlLd-18" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;endArrow=classic;endFill=1;startArrow=classic;startFill=1;" parent="1" source="F8s0xCzP0n8E7-uNUlLd-6" target="F8s0xCzP0n8E7-uNUlLd-5" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="F8s0xCzP0n8E7-uNUlLd-6" value="Database Layer" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="520" y="255" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="F8s0xCzP0n8E7-uNUlLd-22" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;endArrow=classic;endFill=1;startArrow=classic;startFill=1;" parent="1" source="F8s0xCzP0n8E7-uNUlLd-21" target="F8s0xCzP0n8E7-uNUlLd-1" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="F8s0xCzP0n8E7-uNUlLd-21" value="Player/browser interaction" style="ellipse;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="33" y="245" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="F8s0xCzP0n8E7-uNUlLd-23" value="&lt;p style=&quot;margin-top: 0px;&quot;&gt;&lt;font&gt;&lt;font style=&quot;&quot;&gt;&lt;b style=&quot;&quot;&gt;D1:&amp;nbsp;&lt;/b&gt;&lt;/font&gt;&lt;/font&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;This diagram presents the high-level modular design of &lt;/span&gt;&lt;em style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot; data-end=&quot;383&quot; data-start=&quot;367&quot;&gt;Pixel Coliseum&lt;/em&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;, showing several of the core modules. The player enters the system through the &lt;/span&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot; data-end=&quot;482&quot; data-start=&quot;463&quot;&gt;Frontend Client&lt;/span&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;, which handles user input and visual rendering in the browser. The &lt;/span&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot; data-end=&quot;574&quot; data-start=&quot;550&quot;&gt;Realtime Game Server&lt;/span&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt; acts as the authoritative core, processing gameplay actions, managing sessions, and coordinating communication between all subsystems.&amp;nbsp;&lt;/span&gt;Enemy AI &amp;amp; Wave Manager runs on the server to coordinate enemy spawns and behaviors&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;, using perception and decision logic to create dynamic challenges. The &lt;/span&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot; data-end=&quot;868&quot; data-start=&quot;850&quot;&gt;Metrics Output&lt;/span&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt; module reports performance and gameplay statistics for evaluation and tuning. For persistent data, the &lt;/span&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot; data-end=&quot;996&quot; data-start=&quot;972&quot;&gt;Realtime Game Server&lt;/span&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt; communicates with the &lt;/span&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot; data-end=&quot;1037&quot; data-start=&quot;1019&quot;&gt;Database Layer&lt;/span&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;, which manages structured access to the &lt;/span&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot; data-is-only-node=&quot;&quot; data-end=&quot;1101&quot; data-start=&quot;1078&quot;&gt;PostgreSQL Database&lt;/span&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;. This database stores long-term information about players, matches, leaderboards, and game performance data.&lt;/span&gt;&lt;/p&gt;" style="text;html=1;whiteSpace=wrap;overflow=hidden;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="33" y="114" width="760" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="42EzQfms3-F54Jbbl0Hv-1" value="Enemy AI module" style="shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;" vertex="1" parent="1">
+          <mxGeometry x="301" y="349" width="129" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="42EzQfms3-F54Jbbl0Hv-3" value="" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="F8s0xCzP0n8E7-uNUlLd-3" target="42EzQfms3-F54Jbbl0Hv-2">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="474" y="330" as="sourcePoint" />
+            <mxPoint x="510" y="360" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="42EzQfms3-F54Jbbl0Hv-2" value="Metrics output" style="shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;" vertex="1" parent="1">
+          <mxGeometry x="417" y="349" width="120" height="60" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
