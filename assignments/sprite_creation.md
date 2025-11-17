@@ -1,4 +1,4 @@
-# **Pixel Coliseum – Sprite Creation Pipeline**
+# **Pixel Coliseum: Sprite Creation Pipeline**
 
 This document outlines the sprite creation workflow for **Pixel Coliseum**, using a focused, streamlined stack:
 
