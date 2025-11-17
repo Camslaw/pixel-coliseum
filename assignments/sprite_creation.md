@@ -72,8 +72,6 @@ All PixelVibe frames are refined in Aseprite:
 
 Aseprite is the authoritative source of truth for final visuals.
 
----
-
 ### **Step 3: Import Into Phaser 3**
 
 Exported files look like:
