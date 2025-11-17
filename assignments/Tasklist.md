@@ -32,7 +32,7 @@ Cameron Estridge
 
 14. **Configure** the Database Layer DB access component (ORM) to interact with PostgreSQL.
 
-15. **Design and create** PostgreSQL tables for players, matches, match_players, leaderboards, and optional chat logs.
+15. **Design and create** PostgreSQL tables for players, runs, run_players, and leaderboards.
 
 16. **Implement** the Metrics Output system to track tick times, round trip latency, and player/room information.
 
