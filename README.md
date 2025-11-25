@@ -56,7 +56,7 @@ I have not spent any money on this project yet and I have not received any donat
 
 ## Additional Links
 
-### Extra Files
+### Extra Design Files
 - [Sprite Creation Pipeline](assignments/sprite-creation.md)
 - Initial Sprite Art
   - Player Sprite - link
