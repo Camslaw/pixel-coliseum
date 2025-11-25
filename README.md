@@ -40,10 +40,10 @@ The project will be developed using:
 - [Timeline & Effort Matrix](assignments/timeline.pdf)
 
 ## ABET Concerns Essay (Assignment 7)
-- [Project Constraints](assignments/constraint_essay.pdf)
+- [Project Constraints](assignments/constraint-essay.pdf)
 
 ## PowerPoint Slideshow (Assignment 8)
-- [PowerPoint Slideshow](assignments/capstone_presentation.pdf)
+- [PowerPoint Slideshow](assignments/capstone-presentation.pdf)
 
 ## Self-Assessment Essay (Assignment 3)
 - [Capstone Assessment](assignments/capstone-assessment.pdf)
@@ -57,14 +57,14 @@ I have not spent any money on this project yet and I have not received any donat
 ## Additional Links
 
 ### Extra Files
-- [Sprite Creation Pipeline](assignments/sprite_creation.md)
+- [Sprite Creation Pipeline](assignments/sprite-creation.md)
 - Initial Sprite Art
   - Player Sprite - link
   - Enemy Sprite - link
   - Arena Sprite - link
 - [Project Scoping](assignments/scope.md)
-- [Game Rules and Logic Design](assignments/game_design.md)
-- [Initial Arena Sketch](assignments/design-diagrams/initial_sketch.png)
+- [Game Rules and Logic Design](assignments/game-design.md)
+- [Initial Arena Sketch](assignments/design-diagrams/initial-sketch.png)
 
 ### Useful Resources
 - TypeScript Documentation (https://www.typescriptlang.org/docs/)
