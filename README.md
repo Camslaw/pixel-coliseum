@@ -3,16 +3,16 @@
 ## Team Members
 - **Cameron Estridge** – Computer Science Major  
   Email: [estridcc@mail.uc.edu](mailto:estridcc@mail.uc.edu)
+- **Mark Reiss** - Senior Software Engineer   
+  Email: [mark.a.reiss@gmail.com](mailto:mark.a.reiss@gmail.com)
 
-## Project Topic Area
-The project will focus on **web-based game development**.
 
-**Pixel Coliseum** is a top-down 2D **round-based survival game** playable directly in the browser.  
-Players will enter an arena and fight off waves of AI-controlled enemies, either solo or cooperatively online.
+## Abstract and Project Description (Assignment 2)
+**Pixel Coliseum** is a web-based 2D cooperative survival game where players battle waves of AI-controlled enemies in a fast-paced arena environment. Developed using Phaser 3, TypeScript, Node.js, Colyseus, and PostgreSQL, the project demonstrates real-time multiplayer networking, artificial intelligence, and database integration within a browser-accessible platform. Players can team up online, collect power-ups and various weapons, and compete for high survival scores across multiple rounds. The system tracks player performance, stores persistent statistics, and includes in-game chat functionality. The project highlights full-stack development, networking, and AI design while emphasizing scalability, interactivity, and engaging gameplay through modern web technologies.
 
 ### Core Gameplay
 Players must survive as many waves as possible, using skill, teamwork, and quick reflexes.  
-Enemies become progressively stronger each round, and power-ups or weapon pickups will appear throughout the arena to use strategically and help players survive longer.
+Enemies become progressively stronger and increase in number each round, and power-ups or weapon pickups will appear randomly throughout the arena to use strategically and help players survive longer.
 
 ### Key Features
 - **Real-Time Online Co-op:** Multiple players can connect and survive waves together using web-based multiplayer.
@@ -29,6 +29,53 @@ The project will be developed using:
 - **Backend:** Node.js with Colyseus for multiplayer networking.
 - **Database:** PostgreSQL for storing player stats and match history.
 
-### Objective
-The goal of *Pixel Coliseum* is to deliver a browser-based survival game that demonstrates advanced topics in **web development, networking, AI behavior, and database persistence**.
+## User Stories and Design Diagrams (Assignment 4)
+- [User Stories](assignments/User_Stories.md)
+- [Diagram 0](assignments/Design_Diagrams/D0.png)
+- [Diagram 1](assignments/Design_Diagrams/D1.png)
+- [Diagram 2](assignments/Design_Diagrams/D2.png)
+
+## Project Tasks and Timeline (Assignments 5 & 6)
+- [Task List](assignments/Tasklist.md)
+- [Timeline & Effort Matrix](assignments/timeline.pdf)
+
+## ABET Concerns Essay (Assignment 7)
+- [Project Constraints](assignments/constraint_essay.pdf)
+
+## PowerPoint Slideshow (Assignment 8)
+- [PowerPoint Slideshow](assignments/capstone_presentation.pdf)
+
+## Self-Assessment Essay (Assignment 3)
+- [Capstone Assessment](assignments/CapstoneAssessment_estridcc.pdf)
+
+## Professional Biographies (Assignment 1)
+- [Cameron Estridge](assignments/Cameron-Estridge.md)
+
+## Budget
+I have not spent any money on this project yet and I have not received any donations. However, I do plan on purchasing Aseprite for $19.99 with my own money, which will be a useful pixel art editing tool for my sprite creation process.
+
+## Additional Links
+
+### Extra Files
+- [Sprite Creation Pipeline](assignments/sprite_creation.md)
+- Initial Sprite Art
+  - Player Sprite - link
+  - Enemy Sprite - link
+  - Arena Sprite - link
+- [Project Scoping](assignments/scope.md)
+- [Game Rules and Logic Design](assignments/game_design.md)
+- [Initial Arena Sketch](assignments/Design_Diagrams/initial_sketch.png)
+
+### Useful Resources
+- TypeScript Documentation (https://www.typescriptlang.org/docs/)
+- Phaser Documentation (https://docs.phaser.io/phaser/getting-started/what-is-phaser)
+- Node Documentation (https://nodejs.org/docs/latest/api/)
+- Colyseus Documentation (https://docs.colyseus.io/)
+- PixelVibe (https://beta.pixelvibe.com/)
+- Aseprite (https://www.aseprite.org/)
+
+
+
+
+
 
