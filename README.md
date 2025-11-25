@@ -30,13 +30,13 @@ The project will be developed using:
 - **Database:** PostgreSQL for storing player stats and match history.
 
 ## User Stories and Design Diagrams (Assignment 4)
-- [User Stories](assignments/User_Stories.md)
-- [Diagram 0](assignments/Design_Diagrams/D0.png)
-- [Diagram 1](assignments/Design_Diagrams/D1.png)
-- [Diagram 2](assignments/Design_Diagrams/D2.png)
+- [User Stories](assignments/user-stories.md)
+- [Diagram 0](assignments/design-diagrams/D0.png)
+- [Diagram 1](assignments/design-diagrams/D1.png)
+- [Diagram 2](assignments/design-diagrams/D2.png)
 
 ## Project Tasks and Timeline (Assignments 5 & 6)
-- [Task List](assignments/Tasklist.md)
+- [Task List](assignments/tasklist.md)
 - [Timeline & Effort Matrix](assignments/timeline.pdf)
 
 ## ABET Concerns Essay (Assignment 7)
@@ -46,10 +46,10 @@ The project will be developed using:
 - [PowerPoint Slideshow](assignments/capstone_presentation.pdf)
 
 ## Self-Assessment Essay (Assignment 3)
-- [Capstone Assessment](assignments/CapstoneAssessment_estridcc.pdf)
+- [Capstone Assessment](assignments/capstone-assessment.pdf)
 
 ## Professional Biographies (Assignment 1)
-- [Cameron Estridge](assignments/Cameron-Estridge.md)
+- [Cameron Estridge](assignments/cameron-estridge.md)
 
 ## Budget
 I have not spent any money on this project yet and I have not received any donations. However, I do plan on purchasing Aseprite for $19.99 with my own money, which will be a useful pixel art editing tool for my sprite creation process.
@@ -64,7 +64,7 @@ I have not spent any money on this project yet and I have not received any donat
   - Arena Sprite - link
 - [Project Scoping](assignments/scope.md)
 - [Game Rules and Logic Design](assignments/game_design.md)
-- [Initial Arena Sketch](assignments/Design_Diagrams/initial_sketch.png)
+- [Initial Arena Sketch](assignments/design-diagrams/initial_sketch.png)
 
 ### Useful Resources
 - TypeScript Documentation (https://www.typescriptlang.org/docs/)
