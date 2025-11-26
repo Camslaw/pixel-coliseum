@@ -12,7 +12,7 @@ This pipeline produces consistent, high-quality pixel art while keeping developm
 
 ## **1. Overview of the Art Pipeline**
 
-The workflow is simple:
+The workflow is as follows:
 
 1. **PixelVibe → Generate base pixel art**  
    - Characters, enemies, weapons, tiles, props, and VFX  
