@@ -52,16 +52,16 @@ The project will be developed using:
 - [Cameron Estridge](assignments/cameron-estridge.md)
 
 ## Budget
-I have not spent any money on this project yet and I have not received any donations. However, I do plan on purchasing Aseprite for $19.99 with my own money, which will be a useful pixel art editing tool for my sprite creation process.
+I have spent $1 of my own money on a pixel art pack. I also purchased Aseprite for $19.99 with my own money, which will be a useful pixel art editing tool for sprite creation or editing purposes.
 
 ## Additional Links
 
 ### Extra Design Files
 - [Sprite Creation Pipeline](assignments/sprite-creation.md)
-- Initial Sprite Art
-  - Player Sprite - link
-  - Enemy Sprite - link
-  - Arena Sprite - link
+- Initial Pixel Art
+  - [Player Sprites](assignments/assets/player-sprites.png)
+  - [Enemy (Type 1) Sprites](assignments/assets/enemy1-sprites.png)
+  - [Arena Map](assignments/assets/arena-map.png)
 - [Project Scoping](assignments/scope.md)
 - [Game Rules and Logic Design](assignments/game-design.md)
 - [Initial Arena Sketch](assignments/design-diagrams/initial-sketch.png)
