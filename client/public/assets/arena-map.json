@@ -540,8 +540,17 @@
  "tileheight":32,
  "tilesets":[
         {
+         "columns":15,
          "firstgid":1,
-         "source":"arena-tileset.tsx"
+         "image":"Royal Arena+.png",
+         "imageheight":704,
+         "imagewidth":480,
+         "margin":0,
+         "name":"arena-tileset",
+         "spacing":0,
+         "tilecount":330,
+         "tileheight":32,
+         "tilewidth":32
         }],
  "tilewidth":32,
  "type":"map",

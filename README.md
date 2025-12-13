@@ -59,9 +59,9 @@ I have spent $1 of my own money on a pixel art pack. I also purchased Aseprite f
 ### Extra Design Files
 - [Sprite Creation Pipeline](assignments/sprite-creation.md)
 - Initial Pixel Art
-  - [Player Sprites](assignments/assets/player-sprites.png)
-  - [Enemy (Type 1) Sprites](assignments/assets/enemy1-sprites.png)
-  - [Arena Map](assignments/assets/arena-map.png)
+  - [Player Sprites](client/public/assets/player-sprites.png)
+  - [Enemy (Type 1) Sprites](client/public/assets/enemy1-sprites.png)
+  - [Arena Map](client/public/assets/arena-map.png)
 - [Project Scoping](assignments/scope.md)
 - [Game Rules and Logic Design](assignments/game-design.md)
 - [Initial Arena Sketch](assignments/design-diagrams/initial-sketch.png)
