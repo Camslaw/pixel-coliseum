@@ -18,35 +18,32 @@ class MainScene extends Phaser.Scene {
 
   create() {
     const map = this.make.tilemap({ key: "arena-map" });
-
     const tileset = map.addTilesetImage("arena-tileset", "tiles");
     if (!tileset) throw new Error("Tileset mapping failed.");
 
-    map.createLayer("Tile Layer 1", tileset, 0, 0);
-    map.createLayer("additional layer", tileset, 0, 0);
+    // Calculate offset to center the map in the scene
+    const offsetX = (this.cameras.main.width - map.widthInPixels) / 2;
+    const offsetY = (this.cameras.main.height - map.heightInPixels) / 2;
+
+    // Create layers at the offset position
+    map.createLayer("Tile Layer 1", tileset, offsetX, offsetY);
+    map.createLayer("additional layer", tileset, offsetX, offsetY);
 
     // --- Render Object Layer 1 (gid-based objects) ---
     const objLayer = map.getObjectLayer("Object Layer 1");
     if (!objLayer) throw new Error("Missing object layer: Object Layer 1");
 
     for (const obj of objLayer.objects) {
-      // Only tile-objects have gid
       if (!("gid" in obj) || !obj.gid) continue;
-
-      // Convert global tile id -> tileset frame index
       const frame = obj.gid - tileset.firstgid;
-
-      // Tiled object's (x,y) is bottom-left for tile objects in orthogonal maps
-      const x = (obj.x ?? 0) + (obj.width ?? 0) / 2;
-      const y = (obj.y ?? 0) - (obj.height ?? 0) / 2;
-
+      // Apply offset to object positions
+      const x = (obj.x ?? 0) + (obj.width ?? 0) / 2 + offsetX;
+      const y = (obj.y ?? 0) - (obj.height ?? 0) / 2 + offsetY;
       const sprite = this.add.image(x, y, "tiles", frame);
-
-      // If rotation is used in Tiled:
       if (obj.rotation) sprite.setRotation(Phaser.Math.DegToRad(obj.rotation));
     }
 
-    this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
+    // No need to move the camera, just show the whole scene
   }
 
 }
