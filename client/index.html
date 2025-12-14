@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <title>Pixel Coliseum</title>
-    <!-- ...existing code... -->
+
     <style>
       body {
         margin: 0;
@@ -13,13 +13,24 @@
         align-items: center;
         height: 100vh;
       }
+
+      /* Phaser will inject the <canvas> inside #app */
+      #app {
+        width: 1200px;
+        height: 720px;
+      }
+
       canvas {
         display: block;
       }
     </style>
-    <!-- ...existing code... -->
   </head>
+
   <body>
+    <!-- Phaser mounts here -->
+    <div id="app"></div>
+
+    <!-- Vite entry -->
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
