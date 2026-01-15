@@ -22,10 +22,8 @@ export default class LobbyScene extends Phaser.Scene {
   }
 
   create() {
-    // Basic background
     this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0x1d1f27).setOrigin(0);
 
-    // HUD (always visible)
     const hud = this.add.text(
       16,
       16,
@@ -54,7 +52,6 @@ export default class LobbyScene extends Phaser.Scene {
       lineSpacing: 4,
     });
 
-    // DOM button container
     const html = `
       <div style="
         width: 360px;
@@ -117,7 +114,6 @@ export default class LobbyScene extends Phaser.Scene {
       this.room.send("start_game");
     };
 
-    // Player list rendering
     const renderPlayers = () => {
       const players = (this.room.state as any).players;
       if (!players || !this.playerListText) return;
@@ -132,12 +128,9 @@ export default class LobbyScene extends Phaser.Scene {
       this.playerListText.setText(["Players:", ...lines].join("\n"));
     };
 
-    // Initial render
     renderLobbyUI();
     renderPlayers();
 
-    // React to state changes
-    // Phase changes: move everyone to arena
     this.room.onStateChange(() => {
       renderLobbyUI();
 
@@ -150,8 +143,6 @@ export default class LobbyScene extends Phaser.Scene {
       }
     });
 
-
-    // Players add/remove: update list
     const players = (this.room.state as any).players;
     if (players) {
       players.onAdd = () => {
@@ -164,12 +155,10 @@ export default class LobbyScene extends Phaser.Scene {
       };
     }
 
-    // Keep centered on resize
     this.scale.on("resize", () => {
       this.uiRoot?.setPosition(this.scale.width / 2, this.scale.height / 2);
     });
 
-    // Nice-to-have: handle disconnects
     this.room.onLeave(() => {
       this.uiRoot?.destroy();
       this.uiRoot = undefined;

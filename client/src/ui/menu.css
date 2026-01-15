@@ -1,0 +1,20 @@
+.menu-root {
+  width: 560px;
+  padding: 18px;
+  background: linear-gradient(180deg, #0c0e16, #080a10);
+  border: 4px solid #ffc850;
+  border-radius: 16px;
+  color: white;
+  font-family: ui-monospace, monospace;
+}
+
+.menu-root .logo {
+  display: block;
+  margin: 0 auto 10px;
+  width: 360px;
+  image-rendering: pixelated;
+}
+
+.menu-root button {
+  cursor: pointer;
+}
