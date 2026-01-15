@@ -64,6 +64,7 @@ export default class LobbyScene extends Phaser.Scene {
         color: #fff;
         font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
         text-align: center;
+        pointer-events: auto;  /* ✅ important */
       ">
         <div style="font-size: 20px; font-weight: 700; margin-bottom: 10px;">Lobby</div>
         <div id="hint" style="font-size: 13px; opacity: 0.9; margin-bottom: 12px;">Waiting...</div>
@@ -137,7 +138,7 @@ export default class LobbyScene extends Phaser.Scene {
 
     // React to state changes
     // Phase changes: move everyone to arena
-    (this.room.state as any).onChange = () => {
+    this.room.onStateChange(() => {
       renderLobbyUI();
 
       const phase = (this.room.state as any).phase as string;
@@ -147,7 +148,8 @@ export default class LobbyScene extends Phaser.Scene {
 
         this.scene.start("arena", { room: this.room });
       }
-    };
+    });
+
 
     // Players add/remove: update list
     const players = (this.room.state as any).players;
