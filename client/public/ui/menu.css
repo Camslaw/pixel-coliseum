@@ -1,0 +1,46 @@
+.menu-root {
+  display: flex;
+  flex-direction: column;
+  gap: 20px; /* vertical space between image, subtitle, labels, fields, etc. */
+  width: 560px;
+  padding: 18px;
+  background: linear-gradient(180deg, #0c0e16, #080a10);
+  border: 4px solid #ffc850;
+  border-radius: 16px;
+  color: white;
+  font-family: ui-monospace, monospace;
+  position: relative;
+}
+
+.menu-root .logo {
+  display: block;
+  margin: 0 auto 10px;
+  width: 360px;
+  image-rendering: pixelated;
+}
+
+.menu-root button {
+  cursor: pointer;
+}
+
+/* ...existing code... */
+.menu-root .field {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.menu-root .field input {
+  flex: 1 1 auto;
+  min-width: 160px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid #333;
+}
+
+/* optional: keep the buttons grouped */
+.menu-root .classes {
+  display: flex;
+  gap: 8px;
+}
