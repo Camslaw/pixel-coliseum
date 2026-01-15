@@ -20,7 +20,6 @@ export default class ArenaScene extends Phaser.Scene {
   }
 
   create() {
-    // --- Map (your existing logic) ---
     const map = this.make.tilemap({ key: "arena-map" });
     const tileset = map.addTilesetImage("arena-tileset", "tiles");
     if (!tileset) throw new Error("Tileset mapping failed.");
@@ -43,7 +42,6 @@ export default class ArenaScene extends Phaser.Scene {
         if (obj.rotation) sprite.setRotation(Phaser.Math.DegToRad(obj.rotation));
     }
 
-    // HUD first (always visible)
     const hud = this.add.text(
         16,
         16,
@@ -59,11 +57,9 @@ export default class ArenaScene extends Phaser.Scene {
     hud.setScrollFactor(0);
     hud.setDepth(9999);
 
-    // --- Multiplayer placeholders (driven by room state) ---
     const players = (this.room.state as any).players;
     if (!players) {
         console.warn("Room state has no players map yet.");
-        // don't return; HUD still shows
         return;
     }
 

@@ -10,7 +10,6 @@ export class ArenaRoom extends Room<ArenaState> {
   onCreate(_options: any) {
     this.setState(new ArenaState());
 
-    // optional: cap players for now
     this.maxClients = 8;
 
     this.onMessage("start_game", (client) => {
@@ -28,7 +27,6 @@ export class ArenaRoom extends Room<ArenaState> {
     p.name = (options.name ?? "Player").slice(0, 16);
     p.class = normalizeClass(options.class);
 
-    // placeholder spawn
     p.x = 200 + Math.random() * 600;
     p.y = 200 + Math.random() * 300;
 
