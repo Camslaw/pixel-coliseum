@@ -17,7 +17,6 @@ export default class MenuScene extends Phaser.Scene {
   }
   
   create() {
-    // Colyseus server default: ws://localhost:2567
     this.client = new Client("ws://localhost:2567");
 
     this.uiRoot = this.add
@@ -31,7 +30,7 @@ export default class MenuScene extends Phaser.Scene {
     const logo = el.querySelector<HTMLImageElement>(".logo");
 
     const recenter = () => {
-      this.uiRoot?.updateSize(); // <- key
+      this.uiRoot?.updateSize();
       this.uiRoot?.setPosition(this.cameras.main.centerX, this.cameras.main.centerY);
     };
 
@@ -43,10 +42,8 @@ export default class MenuScene extends Phaser.Scene {
       }
     }
 
-    // also do it next tick (helps when fonts/layout settle)
     this.time.delayedCall(0, recenter);
 
-    // optional: if you ever truly resize the canvas
     this.scale.on("resize", recenter);
 
     const nameInput = el.querySelector<HTMLInputElement>("#name")!;
@@ -73,7 +70,6 @@ export default class MenuScene extends Phaser.Scene {
 
         status.innerText = `Hosted! Room ID: ${room.roomId} (copy this to join from another tab)`;
 
-        // Go to lobby before game
         this.startLobby(room);
       } catch (err) {
         status.innerText = `Host failed: ${String(err)}`;
@@ -100,18 +96,15 @@ export default class MenuScene extends Phaser.Scene {
       }
     };
 
-    // keep UI centered on resize
     this.scale.on("resize", () => {
       this.uiRoot?.setPosition(this.scale.width / 2, this.scale.height / 2);
     });
   }
 
   private startArena(room: Room) {
-    // Remove menu UI
     this.uiRoot?.destroy();
     this.uiRoot = undefined;
 
-    // Pass room to ArenaScene
     this.scene.start("arena", { room });
   }
 
