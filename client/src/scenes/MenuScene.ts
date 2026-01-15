@@ -89,8 +89,8 @@ export default class MenuScene extends Phaser.Scene {
 
         status.innerText = `Hosted! Room ID: ${room.roomId} (copy this to join from another tab)`;
 
-        // Go to game immediately for the host
-        this.startArena(room);
+        // Go to lobby before game
+        this.startLobby(room);
       } catch (err) {
         status.innerText = `Host failed: ${String(err)}`;
       }
@@ -110,7 +110,7 @@ export default class MenuScene extends Phaser.Scene {
           class: this.selectedClass,
         });
 
-        this.startArena(room);
+        this.startLobby(room);
       } catch (err) {
         status.innerText = `Join failed: ${String(err)}`;
       }
@@ -130,4 +130,12 @@ export default class MenuScene extends Phaser.Scene {
     // Pass room to ArenaScene
     this.scene.start("arena", { room });
   }
+
+  private startLobby(room: Room) {
+    this.uiRoot?.destroy();
+    this.uiRoot = undefined;
+
+    this.scene.start("lobby", { room });
+  }
+
 }
