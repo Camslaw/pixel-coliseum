@@ -4,20 +4,31 @@
     <meta charset="UTF-8" />
     <title>Pixel Coliseum</title>
 
+    <link rel="stylesheet" href="/ui/menu.css" />
+
+    <link rel="icon" href="/assets/pc-logo.ico" />
+
     <style>
-      body {
+      html, body {
         margin: 0;
+        width: 100%;
+        height: 100%;
         background: #1d1f27;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100vh;
       }
 
-      /* Phaser will inject the <canvas> inside #app */
+      /* Phaser mounts here */
       #app {
         width: 1200px;
         height: 720px;
+
+        /* center the GAME CANVAS only */
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+
+        /* IMPORTANT so DOM overlay can position correctly */
+        overflow: visible;
       }
 
       canvas {

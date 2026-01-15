@@ -1,69 +1,53 @@
 import Phaser from "phaser";
 import { Client, Room } from "colyseus.js";
 
-type PlayerClass = "sword" | "bow" | "magic";
+type PlayerClass = "Sword" | "Bow" | "Magic";
 
 export default class MenuScene extends Phaser.Scene {
   private client!: Client;
-  private selectedClass: PlayerClass = "sword";
+  private selectedClass: PlayerClass = "Sword";
   private uiRoot?: Phaser.GameObjects.DOMElement;
 
   constructor() {
     super("menu");
   }
 
+  preload() {
+    this.load.html("menu-ui", "/ui/menu.html");
+  }
+  
   create() {
     // Colyseus server default: ws://localhost:2567
     this.client = new Client("ws://localhost:2567");
 
-    const html = `
-      <div style="
-        width: 520px;
-        padding: 18px;
-        border-radius: 14px;
-        background: rgba(0,0,0,0.55);
-        color: #fff;
-        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-      ">
-        <div style="font-size: 24px; font-weight: 700; margin-bottom: 12px;">
-          Pixel Coliseum
-        </div>
+    this.uiRoot = this.add
+      .dom(this.cameras.main.centerX, this.cameras.main.centerY)
+      .createFromCache("menu-ui");
 
-        <div style="margin-bottom: 10px;">
-          <label style="display:block; font-size: 13px; opacity: 0.9;">Name</label>
-          <input id="name" type="text" placeholder="Player" value="Player"
-            style="width: 100%; padding: 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); color: #fff;" />
-        </div>
-
-        <div style="margin-bottom: 10px;">
-          <div style="font-size: 13px; opacity: 0.9; margin-bottom: 6px;">Class</div>
-          <div style="display:flex; gap: 10px;">
-            <button id="sword" style="flex:1; padding: 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); color: #fff; cursor:pointer;">Sword</button>
-            <button id="bow"   style="flex:1; padding: 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); color: #fff; cursor:pointer;">Bow</button>
-            <button id="magic" style="flex:1; padding: 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); color: #fff; cursor:pointer;">Magic</button>
-          </div>
-          <div id="classHint" style="margin-top: 6px; font-size: 12px; opacity: 0.85;">Selected: sword</div>
-        </div>
-
-        <div style="margin-bottom: 10px;">
-          <label style="display:block; font-size: 13px; opacity: 0.9;">Room ID (for Join)</label>
-          <input id="roomId" type="text" placeholder="Paste room id here"
-            style="width: 100%; padding: 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); color: #fff;" />
-        </div>
-
-        <div style="display:flex; gap: 10px; margin-top: 12px;">
-          <button id="host" style="flex:1; padding: 12px; border-radius: 12px; border: none; background: #2f6fed; color: #fff; cursor:pointer; font-weight: 700;">Host Game</button>
-          <button id="join" style="flex:1; padding: 12px; border-radius: 12px; border: none; background: #1ea97c; color: #fff; cursor:pointer; font-weight: 700;">Join Game</button>
-        </div>
-
-        <div id="status" style="margin-top: 10px; font-size: 12px; opacity: 0.9;"></div>
-      </div>
-    `;
-
-    // Center UI
-    this.uiRoot = this.add.dom(this.scale.width / 2, this.scale.height / 2).createFromHTML(html);
+    this.uiRoot.setOrigin(0.5, 0.5);
+    this.uiRoot.setDepth(1000);
 
     const el = this.uiRoot.node as HTMLDivElement;
+    const logo = el.querySelector<HTMLImageElement>(".logo");
+
+    const recenter = () => {
+      this.uiRoot?.updateSize(); // <- key
+      this.uiRoot?.setPosition(this.cameras.main.centerX, this.cameras.main.centerY);
+    };
+
+    if (logo) {
+      if (logo.complete) {
+        recenter();
+      } else {
+        logo.addEventListener("load", recenter, { once: true });
+      }
+    }
+
+    // also do it next tick (helps when fonts/layout settle)
+    this.time.delayedCall(0, recenter);
+
+    // optional: if you ever truly resize the canvas
+    this.scale.on("resize", recenter);
 
     const nameInput = el.querySelector<HTMLInputElement>("#name")!;
     const roomIdInput = el.querySelector<HTMLInputElement>("#roomId")!;
@@ -75,9 +59,9 @@ export default class MenuScene extends Phaser.Scene {
       classHint.innerText = `Selected: ${cls}`;
     };
 
-    el.querySelector<HTMLButtonElement>("#sword")!.onclick = () => setSelected("sword");
-    el.querySelector<HTMLButtonElement>("#bow")!.onclick = () => setSelected("bow");
-    el.querySelector<HTMLButtonElement>("#magic")!.onclick = () => setSelected("magic");
+    el.querySelector<HTMLButtonElement>("#sword")!.onclick = () => setSelected("Sword");
+    el.querySelector<HTMLButtonElement>("#bow")!.onclick = () => setSelected("Bow");
+    el.querySelector<HTMLButtonElement>("#magic")!.onclick = () => setSelected("Magic");
 
     el.querySelector<HTMLButtonElement>("#host")!.onclick = async () => {
       status.innerText = "Hosting...";
