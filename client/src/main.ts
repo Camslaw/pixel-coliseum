@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import BootScene from "./scenes/BootScene";
 import MenuScene from "./scenes/MenuScene";
+import LobbyScene from "./scenes/LobbyScene";
 import ArenaScene from "./scenes/ArenaScene";
 
 class MainScene extends Phaser.Scene {
@@ -57,7 +58,7 @@ const config: Phaser.Types.Core.GameConfig = {
   height: 720,
   backgroundColor: "#1d1f27",
   parent: "app",
-  scene: [BootScene, MenuScene, ArenaScene],
+  scene: [BootScene, MenuScene, LobbyScene, ArenaScene],
 
   // IMPORTANT for Phaser DOM UI (input/buttons)
   dom: { createContainer: true },
