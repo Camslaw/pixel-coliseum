@@ -12,6 +12,14 @@ export class ArenaRoom extends Room<ArenaState> {
 
     // optional: cap players for now
     this.maxClients = 8;
+
+    this.onMessage("start_game", (client) => {
+      if (client.sessionId !== this.state.hostId) return;
+
+      if (this.state.phase !== "lobby") return;
+
+      this.state.phase = "playing";
+    });
   }
 
   onJoin(client: Client, options: JoinOptions) {
@@ -25,10 +33,20 @@ export class ArenaRoom extends Room<ArenaState> {
     p.y = 200 + Math.random() * 300;
 
     this.state.players.set(client.sessionId, p);
+
+    if (!this.state.hostId) {
+      this.state.hostId = client.sessionId;
+    }
   }
 
   onLeave(client: Client) {
     this.state.players.delete(client.sessionId);
+
+    if (client.sessionId === this.state.hostId) {
+      const next = this.state.players.keys().next().value;
+      this.state.hostId = next ?? "";
+      if (!this.state.hostId) this.state.phase = "lobby";
+    }
   }
 }
 

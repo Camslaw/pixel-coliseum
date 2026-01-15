@@ -10,4 +10,7 @@ export class Player extends Schema {
 
 export class ArenaState extends Schema {
   @type({ map: Player }) players = new MapSchema<Player>();
+
+  @type("string") phase: "lobby" | "playing" | "playing" = "lobby";
+  @type("string") hostId: string = "";
 }
