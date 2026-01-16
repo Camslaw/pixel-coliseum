@@ -1,11 +1,11 @@
 import Phaser from "phaser";
 import { Client, Room } from "colyseus.js";
 
-type PlayerClass = "Sword" | "Bow" | "Magic";
+type PlayerClass = "sword" | "bow" | "magic";
 
 export default class MenuScene extends Phaser.Scene {
   private client!: Client;
-  private selectedClass: PlayerClass = "Sword";
+  private selectedClass: PlayerClass = "sword";
   private uiRoot?: Phaser.GameObjects.DOMElement;
 
   constructor() {
@@ -56,9 +56,9 @@ export default class MenuScene extends Phaser.Scene {
       classHint.innerText = `Selected: ${cls}`;
     };
 
-    el.querySelector<HTMLButtonElement>("#sword")!.onclick = () => setSelected("Sword");
-    el.querySelector<HTMLButtonElement>("#bow")!.onclick = () => setSelected("Bow");
-    el.querySelector<HTMLButtonElement>("#magic")!.onclick = () => setSelected("Magic");
+    el.querySelector<HTMLButtonElement>("#sword")!.onclick = () => setSelected("sword");
+    el.querySelector<HTMLButtonElement>("#bow")!.onclick = () => setSelected("bow");
+    el.querySelector<HTMLButtonElement>("#magic")!.onclick = () => setSelected("magic");
 
     el.querySelector<HTMLButtonElement>("#host")!.onclick = async () => {
       status.innerText = "Hosting...";
