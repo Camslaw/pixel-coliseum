@@ -1,19 +1,18 @@
 import Phaser from "phaser";
 import type { Room } from "colyseus.js";
 
-type LobbySceneData = {
-  room: Room;
-};
+type LobbySceneData = { room: Room };
 
 export default class LobbyScene extends Phaser.Scene {
   private room!: Room;
   private uiRoot?: Phaser.GameObjects.DOMElement;
 
-  private playerListText?: Phaser.GameObjects.Text;
-  private statusText?: Phaser.GameObjects.Text;
-
   constructor() {
     super("lobby");
+  }
+
+  preload() {
+    this.load.html("lobby-ui", "/ui/lobby.html");
   }
 
   init(data: LobbySceneData) {
@@ -22,73 +21,65 @@ export default class LobbyScene extends Phaser.Scene {
   }
 
   create() {
+    // debug: prove the scene is running
+    // this.add.text(600, 360, "LOBBY SCENE LOADED", { fontFamily: "monospace", fontSize: "24px", color: "#fff" })
+    //   .setOrigin(0.5).setDepth(99999);
+
     this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0x1d1f27).setOrigin(0);
 
-    const hud = this.add.text(
-      16,
-      16,
-      `Room: ${this.room.roomId}\nYou: ${this.room.sessionId}`,
-      {
-        fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
-        fontSize: "14px",
-        color: "#ffffff",
-        backgroundColor: "rgba(0,0,0,0.5)",
-        padding: { left: 8, right: 8, top: 6, bottom: 6 },
-      }
-    );
-    hud.setScrollFactor(0);
-    hud.setDepth(9999);
+    this.uiRoot = this.add
+      .dom(this.cameras.main.centerX, this.cameras.main.centerY)
+      .createFromCache("lobby-ui");
 
-    this.statusText = this.add.text(16, 70, "", {
-      fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
-      fontSize: "14px",
-      color: "#ffffff",
-    });
+    this.uiRoot.setOrigin(0.5, 0.5);
+    this.uiRoot.setDepth(1000);
 
-    this.playerListText = this.add.text(16, 105, "", {
-      fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
-      fontSize: "14px",
-      color: "#ffffff",
-      lineSpacing: 4,
-    });
-
-    const html = `
-      <div style="
-        width: 360px;
-        padding: 14px;
-        border-radius: 14px;
-        background: rgba(0,0,0,0.55);
-        color: #fff;
-        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-        text-align: center;
-        pointer-events: auto;  /* ✅ important */
-      ">
-        <div style="font-size: 20px; font-weight: 700; margin-bottom: 10px;">Lobby</div>
-        <div id="hint" style="font-size: 13px; opacity: 0.9; margin-bottom: 12px;">Waiting...</div>
-        <button id="start" style="
-          width: 100%;
-          padding: 12px;
-          border-radius: 12px;
-          border: none;
-          background: #2f6fed;
-          color: #fff;
-          cursor: pointer;
-          font-weight: 700;
-          display: none;
-        ">Start Game</button>
-      </div>
-    `;
-
-    this.uiRoot = this.add.dom(this.scale.width / 2, this.scale.height / 2).createFromHTML(html);
     const el = this.uiRoot.node as HTMLDivElement;
-    const hint = el.querySelector<HTMLDivElement>("#hint")!;
-    const startBtn = el.querySelector<HTMLButtonElement>("#start")!;
+
+    const roomIdText = el.querySelector<HTMLSpanElement>("#roomIdText");
+    const sessionIdText = el.querySelector<HTMLSpanElement>("#sessionIdText");
+    const hint = el.querySelector<HTMLDivElement>("#hint");
+    const playersBox = el.querySelector<HTMLDivElement>("#players");
+    const startBtn = el.querySelector<HTMLButtonElement>("#start");
+    const status = el.querySelector<HTMLDivElement>("#status");
+
+    if (!roomIdText || !sessionIdText || !hint || !playersBox || !startBtn || !status) {
+      console.error("[Lobby] Missing expected DOM nodes. Check lobby.html ids.");
+      return;
+    }
+
+    roomIdText.innerText = this.room.roomId;
+    sessionIdText.innerText = this.room.sessionId;
+
+    const recenter = () => {
+      this.uiRoot?.updateSize();
+      this.uiRoot?.setPosition(this.cameras.main.centerX, this.cameras.main.centerY);
+    };
+
+    this.time.delayedCall(0, recenter);
+    this.scale.on("resize", recenter);
+
+    const renderPlayers = () => {
+      const players = (this.room.state as any).players;
+      if (!players) {
+        playersBox.innerText = "-";
+        return;
+      }
+
+      const lines: string[] = [];
+      players.forEach((p: any, sid: string) => {
+        const me = sid === this.room.sessionId ? " (you)" : "";
+        const host = sid === (this.room.state as any).hostId ? " [host]" : "";
+        lines.push(`${p.name ?? "Player"} - ${p.class ?? "sword"}${host}${me}`);
+      });
+
+      playersBox.innerText = lines.length ? lines.join("\n") : "-";
+    };
 
     const renderLobbyUI = () => {
       const state = this.room.state as any;
       const phase = state.phase as string;
       const hostId = state.hostId as string;
-
       const isHost = this.room.sessionId === hostId;
 
       if (phase === "lobby") {
@@ -107,56 +98,26 @@ export default class LobbyScene extends Phaser.Scene {
         startBtn.style.display = "none";
       }
 
-      this.statusText?.setText(`Host: ${hostId || "(none)"}   Phase: ${phase}`);
+      status.innerText = `Host: ${hostId || "(none)"}   Phase: ${phase}`;
     };
 
-    startBtn.onclick = () => {
-      this.room.send("start_game");
-    };
-
-    const renderPlayers = () => {
-      const players = (this.room.state as any).players;
-      if (!players || !this.playerListText) return;
-
-      const lines: string[] = [];
-      players.forEach((p: any, sid: string) => {
-        const me = sid === this.room.sessionId ? " (you)" : "";
-        const host = sid === (this.room.state as any).hostId ? " [host]" : "";
-        lines.push(`${p.name ?? "Player"} - ${p.class ?? "melee"}${host}${me}`);
-      });
-
-      this.playerListText.setText(["Players:", ...lines].join("\n"));
-    };
+    startBtn.onclick = () => this.room.send("start_game");
 
     renderLobbyUI();
     renderPlayers();
+    recenter();
 
     this.room.onStateChange(() => {
       renderLobbyUI();
+      renderPlayers();
+      recenter();
 
       const phase = (this.room.state as any).phase as string;
       if (phase === "playing") {
         this.uiRoot?.destroy();
         this.uiRoot = undefined;
-
         this.scene.start("arena", { room: this.room });
       }
-    });
-
-    const players = (this.room.state as any).players;
-    if (players) {
-      players.onAdd = () => {
-        renderPlayers();
-        renderLobbyUI();
-      };
-      players.onRemove = () => {
-        renderPlayers();
-        renderLobbyUI();
-      };
-    }
-
-    this.scale.on("resize", () => {
-      this.uiRoot?.setPosition(this.scale.width / 2, this.scale.height / 2);
     });
 
     this.room.onLeave(() => {
@@ -165,4 +126,5 @@ export default class LobbyScene extends Phaser.Scene {
       this.scene.start("menu");
     });
   }
+
 }
