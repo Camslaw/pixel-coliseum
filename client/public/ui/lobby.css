@@ -1,0 +1,72 @@
+.lobby-root {
+  width: 560px;
+  padding: 18px;
+  background: linear-gradient(180deg, #0c0e16, #080a10);
+  border: 4px solid #ffc850;
+  border-radius: 16px;
+  color: white;
+  font-family: ui-monospace, monospace;
+}
+
+.lobby-title {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.lobby-meta {
+  font-size: 12px;
+  opacity: 0.95;
+  display: grid;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.k {
+  opacity: 0.8;
+}
+
+.lobby-hint {
+  text-align: center;
+  font-size: 13px;
+  opacity: 0.95;
+  margin: 10px 0 14px;
+}
+
+.lobby-row {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 10px;
+  align-items: start;
+  margin-bottom: 12px;
+}
+
+.lobby-players {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  padding: 10px;
+  min-height: 90px;
+  white-space: pre-line;
+  font-size: 13px;
+}
+
+.lobby-start {
+  width: 100%;
+  padding: 12px;
+  border-radius: 12px;
+  border: none;
+  background: #2f6fed;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.lobby-status {
+  margin-top: 10px;
+  font-size: 12px;
+  opacity: 0.9;
+  text-align: center;
+}
