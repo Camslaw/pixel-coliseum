@@ -11,6 +11,8 @@ export default class ArenaScene extends Phaser.Scene {
   private room!: Room;
   private playerGfx = new Map<string, Phaser.GameObjects.Arc>();
 
+  private playerListHud?: Phaser.GameObjects.Text;
+
   constructor() {
     super("arena");
   }
@@ -34,67 +36,120 @@ export default class ArenaScene extends Phaser.Scene {
     if (!objLayer) throw new Error("Missing object layer: Object Layer 1");
 
     for (const obj of objLayer.objects) {
-        if (!("gid" in obj) || !obj.gid) continue;
-        const frame = obj.gid - tileset.firstgid;
-        const x = (obj.x ?? 0) + (obj.width ?? 0) / 2 + offsetX;
-        const y = (obj.y ?? 0) - (obj.height ?? 0) / 2 + offsetY;
-        const sprite = this.add.image(x, y, "tiles", frame);
-        if (obj.rotation) sprite.setRotation(Phaser.Math.DegToRad(obj.rotation));
+      if (!("gid" in obj) || !obj.gid) continue;
+      const frame = obj.gid - tileset.firstgid;
+      const x = (obj.x ?? 0) + (obj.width ?? 0) / 2 + offsetX;
+      const y = (obj.y ?? 0) - (obj.height ?? 0) / 2 + offsetY;
+      const sprite = this.add.image(x, y, "tiles", frame);
+      if (obj.rotation) sprite.setRotation(Phaser.Math.DegToRad(obj.rotation));
     }
 
+    // Left HUD (existing)
     const hud = this.add.text(
-        16,
-        16,
-        `Room: ${this.room.roomId}\nYou: ${this.room.sessionId}`,
-        {
+      16,
+      16,
+      `Room: ${this.room.roomId}\nYou: ${this.room.sessionId}`,
+      {
         fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
         fontSize: "14px",
         color: "#ffffff",
         backgroundColor: "rgba(0,0,0,0.5)",
         padding: { left: 8, right: 8, top: 6, bottom: 6 },
-        }
+      }
     );
     hud.setScrollFactor(0);
     hud.setDepth(9999);
 
+    // --- Player list (below HUD) ---
+    this.playerListHud = this.add.text(
+      16,
+      hud.y + hud.height + 8, // ⬅ directly under HUD
+      "",
+      {
+        fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
+        fontSize: "14px",
+        color: "#ffffff",
+        backgroundColor: "rgba(0,0,0,0.5)",
+        padding: { left: 8, right: 8, top: 6, bottom: 6 },
+      }
+    );
+    this.playerListHud.setScrollFactor(0);
+    this.playerListHud.setDepth(9999);
+
     const players = (this.room.state as any).players;
     if (!players) {
-        console.warn("Room state has no players map yet.");
-        return;
+      console.warn("Room state has no players map yet.");
+      return;
     }
 
+    const renderPlayerList = () => {
+      const state = this.room.state as any;
+      const hostId = state.hostId as string | undefined;
+
+      const lines: string[] = [];
+      players.forEach((p: any, sid: string) => {
+        const me = sid === this.room.sessionId ? " (you)" : "";
+        const host = hostId && sid === hostId ? " [host]" : "";
+        const cls = (p.class as string) ?? "(no class)";
+        const name = (p.name as string) ?? "Player";
+        lines.push(`${name} - ${cls}${host}${me}`);
+      });
+
+      this.playerListHud?.setText(
+        ["Players:", ...(lines.length ? lines : ["-"])].join("\n")
+      );
+    };
+
+    // initial draw
+    renderPlayerList();
+
+    // keep HUD pinned if you ever resize camera/canvas
+    this.scale.on("resize", () => {
+      this.playerListHud?.setPosition(this.cameras.main.width - 16, 16);
+    });
+
     players.onAdd = (player: any, sessionId: string) => {
-        const cls = (player.class as PlayerClass) ?? "sword";
+      const cls = (player.class as PlayerClass) ?? "sword";
 
-        const radius = 16;
-        const circle = this.add.circle(player.x, player.y, radius) as Phaser.GameObjects.Arc;
-        circle.setStrokeStyle(3, 0xffffff, 0.9);
-        circle.setAlpha(0.9);
+      const radius = 16;
+      const circle = this.add.circle(player.x, player.y, radius) as Phaser.GameObjects.Arc;
+      circle.setStrokeStyle(3, 0xffffff, 0.9);
+      circle.setAlpha(0.9);
 
-        const label = this.add.text(player.x, player.y - 28, cls, {
+      const label = this.add.text(player.x, player.y - 28, cls, {
         fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
         fontSize: "12px",
         color: "#ffffff",
-        }).setOrigin(0.5);
+      }).setOrigin(0.5);
 
-        (circle as any).__label = label;
+      (circle as any).__label = label;
 
-        player.onChange = () => {
+      player.onChange = () => {
         circle.setPosition(player.x, player.y);
         label.setPosition(player.x, player.y - 28);
         label.setText(player.class);
-        };
 
-        this.playerGfx.set(sessionId, circle);
+        // if name/class can change, keep list fresh
+        renderPlayerList();
+      };
+
+      this.playerGfx.set(sessionId, circle);
+
+      // someone joined
+      renderPlayerList();
     };
 
     players.onRemove = (_player: any, sessionId: string) => {
-        const circle = this.playerGfx.get(sessionId);
-        if (!circle) return;
+      const circle = this.playerGfx.get(sessionId);
+      if (circle) {
         const label = (circle as any).__label as Phaser.GameObjects.Text | undefined;
         label?.destroy();
         circle.destroy();
         this.playerGfx.delete(sessionId);
+      }
+
+      // someone left
+      renderPlayerList();
     };
   }
 }

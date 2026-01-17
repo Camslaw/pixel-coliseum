@@ -40,10 +40,14 @@ export class ArenaRoom extends Room<ArenaState> {
   onLeave(client: Client) {
     this.state.players.delete(client.sessionId);
 
+    if (this.state.players.size === 0) {
+      this.disconnect();
+      return;
+    }
+
     if (client.sessionId === this.state.hostId) {
-      const next = this.state.players.keys().next().value;
-      this.state.hostId = next ?? "";
-      if (!this.state.hostId) this.state.phase = "lobby";
+      const nextHost = this.state.players.keys().next().value as string | undefined;
+      this.state.hostId = nextHost ?? "";
     }
   }
 }

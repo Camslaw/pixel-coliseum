@@ -21,10 +21,6 @@ export default class LobbyScene extends Phaser.Scene {
   }
 
   create() {
-    // debug: prove the scene is running
-    // this.add.text(600, 360, "LOBBY SCENE LOADED", { fontFamily: "monospace", fontSize: "24px", color: "#fff" })
-    //   .setOrigin(0.5).setDepth(99999);
-
     this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0x1d1f27).setOrigin(0);
 
     this.uiRoot = this.add
