@@ -8,13 +8,12 @@ type JoinOptions = {
 
 export class ArenaRoom extends Room<ArenaState> {
   onCreate(_options: any) {
-    this.setState(new ArenaState());
+    this.state = new ArenaState();
 
     this.maxClients = 8;
 
     this.onMessage("start_game", (client) => {
       if (client.sessionId !== this.state.hostId) return;
-
       if (this.state.phase !== "lobby") return;
 
       this.state.phase = "playing";
