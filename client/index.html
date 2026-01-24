@@ -16,18 +16,17 @@
         background: #1d1f27;
       }
 
-      /* Phaser mounts here */
       #app {
         width: 1200px;
         height: 720px;
 
-        /* center the GAME CANVAS only */
+        /* center the game canvas */
         position: absolute;
         left: 50%;
         top: 50%;
         transform: translate(-50%, -50%);
 
-        /* IMPORTANT so DOM overlay can position correctly */
+        /* important so DOM overlay can position correctly */
         overflow: visible;
       }
 
@@ -38,10 +37,10 @@
   </head>
 
   <body>
-    <!-- Phaser mounts here -->
+    <!-- phaser mounts here -->
     <div id="app"></div>
 
-    <!-- Vite entry -->
+    <!-- vite entry -->
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

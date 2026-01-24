@@ -4,8 +4,8 @@ export class Player extends Schema {
   @type("string") id: string = "";
   @type("string") name: string = "";
   @type("string") class: string = "sword";
-  @type("number") x: number = 0;
-  @type("number") y: number = 0;
+  @type("number") tx: number = 0;
+  @type("number") ty: number = 0;
 }
 
 export class ArenaState extends Schema {

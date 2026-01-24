@@ -6,11 +6,31 @@ type JoinOptions = {
   class?: string;
 };
 
+const MAP_W_TILES = 30;
+const MAP_H_TILES = 20;
+
+const GAP = 4; // centers 4 tiles apart => at least 3 tiles between
+
+const midX0 = MAP_W_TILES / 2 - 1; // 14
+const midX1 = MAP_W_TILES / 2;     // 15
+const midY0 = MAP_H_TILES / 2 - 1; // 9
+const midY1 = MAP_H_TILES / 2;     // 10
+
+type SpawnTile = { tx: number; ty: number };
+type SpawnIndex = 0 | 1 | 2 | 3;
+
+const SPAWNS_TILES: [SpawnTile, SpawnTile, SpawnTile, SpawnTile] = [
+  { tx: midX0 - GAP / 2, ty: midY0 - GAP / 2 }, // TL
+  { tx: midX1 + GAP / 2, ty: midY0 - GAP / 2 }, // TR
+  { tx: midX0 - GAP / 2, ty: midY1 + GAP / 2 }, // BL
+  { tx: midX1 + GAP / 2, ty: midY1 + GAP / 2 }, // BR
+];
+
 export class ArenaRoom extends Room<ArenaState> {
   onCreate(_options: any) {
     this.state = new ArenaState();
 
-    this.maxClients = 8;
+    this.maxClients = 4;
 
     this.onMessage("start_game", (client) => {
       if (client.sessionId !== this.state.hostId) return;
@@ -26,8 +46,20 @@ export class ArenaRoom extends Room<ArenaState> {
     p.name = (options.name ?? "Player").slice(0, 16);
     p.class = normalizeClass(options.class);
 
-    p.x = 200 + Math.random() * 600;
-    p.y = 200 + Math.random() * 300;
+    const used = new Set<number>();
+    this.state.players.forEach((pl) => {
+      const idx = (pl as any).spawnIndex;
+      if (typeof idx === "number") used.add(idx);
+    });
+
+    const indices: SpawnIndex[] = [0, 1, 2, 3];
+    const spawnIndex: SpawnIndex = indices.find(i => !used.has(i)) ?? 0;
+
+    const spawn = SPAWNS_TILES[spawnIndex];
+
+    (p as any).spawnIndex = spawnIndex;
+    p.tx = spawn.tx;
+    p.ty = spawn.ty;
 
     this.state.players.set(client.sessionId, p);
 

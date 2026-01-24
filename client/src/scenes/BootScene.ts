@@ -14,6 +14,11 @@ export default class BootScene extends Phaser.Scene {
     });
 
     this.load.tilemapTiledJSON("arena-map", "/assets/arena-map.json");
+
+    this.load.spritesheet("player", "/assets/player-sprites.png", {
+      frameWidth: 48,
+      frameHeight: 48,
+    });
   }
 
   create() {
