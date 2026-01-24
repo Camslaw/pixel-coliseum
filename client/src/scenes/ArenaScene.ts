@@ -9,7 +9,7 @@ type ArenaSceneData = {
 
 export default class ArenaScene extends Phaser.Scene {
   private room!: Room;
-  private playerGfx = new Map<string, Phaser.GameObjects.Arc>();
+  private playerSprites = new Map<string, Phaser.GameObjects.Sprite>();
 
   private playerListHud?: Phaser.GameObjects.Text;
 
@@ -21,13 +21,75 @@ export default class ArenaScene extends Phaser.Scene {
     this.room = data.room;
   }
 
+  private drawDebugGrid(map: Phaser.Tilemaps.Tilemap, offsetX: number, offsetY: number) {
+    const g = this.add.graphics();
+    g.setDepth(9998); // under HUD (9999), over map/objects
+
+    const tileW = map.tileWidth;
+    const tileH = map.tileHeight;
+
+    const w = map.widthInPixels;
+    const h = map.heightInPixels;
+
+    const startX = Math.round(offsetX);
+    const startY = Math.round(offsetY);
+
+    // subtle lines
+    g.lineStyle(1, 0x00ff00, 0.25);
+
+    // vertical lines
+    for (let x = 0; x <= w; x += tileW) {
+      g.beginPath();
+      g.moveTo(startX + x, startY);
+      g.lineTo(startX + x, startY + h);
+      g.strokePath();
+    }
+
+    // horizontal lines
+    for (let y = 0; y <= h; y += tileH) {
+      g.beginPath();
+      g.moveTo(startX, startY + y);
+      g.lineTo(startX + w, startY + y);
+      g.strokePath();
+    }
+
+    // outline the map
+    g.lineStyle(2, 0xffff00, 0.6);
+    g.strokeRect(startX, startY, w, h);
+
+    // optional: show tile coordinates every N tiles
+    const labelEvery = 5;
+    for (let ty = 0; ty < map.height; ty += labelEvery) {
+      for (let tx = 0; tx < map.width; tx += labelEvery) {
+        this.add
+          .text(
+            startX + tx * tileW + 2,
+            startY + ty * tileH + 2,
+            `${tx},${ty}`,
+            { fontSize: "10px", color: "#00ff00" }
+          )
+          .setDepth(9998)
+          .setAlpha(0.8);
+      }
+    }
+  }
+
   create() {
     const map = this.make.tilemap({ key: "arena-map" });
     const tileset = map.addTilesetImage("arena-tileset", "tiles");
     if (!tileset) throw new Error("Tileset mapping failed.");
 
-    const offsetX = (this.cameras.main.width - map.widthInPixels) / 2;
-    const offsetY = (this.cameras.main.height - map.heightInPixels) / 2;
+    const offsetX = Math.round((this.cameras.main.width - map.widthInPixels) / 2);
+    const offsetY = Math.round((this.cameras.main.height - map.heightInPixels) / 2);
+
+    const TILE = map.tileWidth;
+
+    const tileToWorldFeet = (tx: number, ty: number) => ({
+      x: offsetX + (tx + 0.5) * TILE,
+      y: offsetY + (ty + 1) * TILE, // bottom edge of tile (feet)
+    });
+
+    // this.drawDebugGrid(map, offsetX, offsetY);
 
     map.createLayer("Tile Layer 1", tileset, offsetX, offsetY);
     map.createLayer("additional layer", tileset, offsetX, offsetY);
@@ -44,7 +106,25 @@ export default class ArenaScene extends Phaser.Scene {
       if (obj.rotation) sprite.setRotation(Phaser.Math.DegToRad(obj.rotation));
     }
 
-    // Left HUD (existing)
+    // for (const obj of objLayer.objects) {
+    //   if (!("gid" in obj) || !obj.gid) continue;
+
+    //   const frame = obj.gid - tileset.firstgid;
+
+    //   const rawX = (obj.x ?? 0) + (obj.width ?? 0) / 2 + offsetX;
+    //   const rawY = (obj.y ?? 0) - (obj.height ?? 0) / 2 + offsetY;
+
+    //   const x = Math.round(rawX);
+    //   const y = Math.round(rawY);
+
+    //   const sprite = this.add.image(x, y, "tiles", frame);
+
+    //   if (obj.rotation) sprite.setRotation(Phaser.Math.DegToRad(obj.rotation));
+
+    //   // depth sort by y (lower on screen = in front)
+    //   sprite.setDepth(y);
+    // }
+
     const hud = this.add.text(
       16,
       16,
@@ -60,10 +140,9 @@ export default class ArenaScene extends Phaser.Scene {
     hud.setScrollFactor(0);
     hud.setDepth(9999);
 
-    // --- Player list (below HUD) ---
     this.playerListHud = this.add.text(
       16,
-      hud.y + hud.height + 8, // ⬅ directly under HUD
+      hud.y + hud.height + 8,
       "",
       {
         fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
@@ -81,6 +160,58 @@ export default class ArenaScene extends Phaser.Scene {
       console.warn("Room state has no players map yet.");
       return;
     }
+
+    const PLAYER_DEPTH = 50;
+
+    const spawnPlayerSprite = (player: any, sessionId: string) => {
+      if (this.playerSprites.has(sessionId)) return;
+
+      const pos = tileToWorldFeet(player.tx, player.ty);
+
+      const sprite = this.add.sprite(pos.x, pos.y, "player", 0)
+        .setOrigin(0.5, 1)
+        .setDepth(PLAYER_DEPTH);
+
+      // crosshair for debugging
+      // const cross = this.add.graphics().setDepth(9999);
+      // cross.lineStyle(1, 0xff00ff, 1);
+      // cross.strokeLineShape(new Phaser.Geom.Line(pos.x - 6, pos.y, pos.x + 6, pos.y));
+      // cross.strokeLineShape(new Phaser.Geom.Line(pos.x, pos.y - 6, pos.x, pos.y + 6));
+
+      // sprite.setScale(1);
+
+      const NAME_Y_OFFSET = 1.35 * TILE; // centered in tile above the feet tile
+
+      const label = this.add.text(
+        pos.x,
+        pos.y - NAME_Y_OFFSET,
+        player.name ?? "Player",
+        {
+          fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
+          fontSize: "12px",
+          color: "#ffffff",
+        }
+      )
+      .setOrigin(0.5, 0.5)
+      .setDepth(PLAYER_DEPTH + 1);
+
+      (sprite as any).__label = label;
+
+      player.onChange = () => {
+        const pos = tileToWorldFeet(player.tx, player.ty);
+
+        // pixel-perfect (optional but safe)
+        const x = Math.round(pos.x);
+        const y = Math.round(pos.y);
+
+        sprite.setPosition(x, y);
+        label.setPosition(x, y - sprite.displayHeight - 6);
+        label.setText(player.name ?? "Player");
+        renderPlayerList();
+      };
+
+      this.playerSprites.set(sessionId, sprite);
+    };
 
     const renderPlayerList = () => {
       const state = this.room.state as any;
@@ -100,55 +231,26 @@ export default class ArenaScene extends Phaser.Scene {
       );
     };
 
-    // initial draw
+    players.forEach((p: any, sid: string) => spawnPlayerSprite(p, sid));
     renderPlayerList();
 
-    // keep HUD pinned if you ever resize camera/canvas
     this.scale.on("resize", () => {
       this.playerListHud?.setPosition(this.cameras.main.width - 16, 16);
     });
 
     players.onAdd = (player: any, sessionId: string) => {
-      const cls = (player.class as PlayerClass) ?? "sword";
-
-      const radius = 16;
-      const circle = this.add.circle(player.x, player.y, radius) as Phaser.GameObjects.Arc;
-      circle.setStrokeStyle(3, 0xffffff, 0.9);
-      circle.setAlpha(0.9);
-
-      const label = this.add.text(player.x, player.y - 28, cls, {
-        fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
-        fontSize: "12px",
-        color: "#ffffff",
-      }).setOrigin(0.5);
-
-      (circle as any).__label = label;
-
-      player.onChange = () => {
-        circle.setPosition(player.x, player.y);
-        label.setPosition(player.x, player.y - 28);
-        label.setText(player.class);
-
-        // if name/class can change, keep list fresh
-        renderPlayerList();
-      };
-
-      this.playerGfx.set(sessionId, circle);
-
-      // someone joined
+      spawnPlayerSprite(player, sessionId);
       renderPlayerList();
     };
 
     players.onRemove = (_player: any, sessionId: string) => {
-      const circle = this.playerGfx.get(sessionId);
-      if (circle) {
-        const label = (circle as any).__label as Phaser.GameObjects.Text | undefined;
+      const sprite = this.playerSprites.get(sessionId);
+      if (sprite) {
+        const label = (sprite as any).__label as Phaser.GameObjects.Text | undefined;
         label?.destroy();
-        circle.destroy();
-        this.playerGfx.delete(sessionId);
+        sprite.destroy();
+        this.playerSprites.delete(sessionId);
       }
-
-      // someone left
       renderPlayerList();
     };
   }
