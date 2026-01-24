@@ -11,9 +11,9 @@ const config: Phaser.Types.Core.GameConfig = {
   backgroundColor: "#1d1f27",
   parent: "app",
   scene: [BootScene, MenuScene, LobbyScene, ArenaScene],
-
-  // IMPORTANT for Phaser DOM UI (input/buttons)
   dom: { createContainer: true },
+  pixelArt: true,
+  roundPixels: true,
 };
 
 new Phaser.Game(config);
