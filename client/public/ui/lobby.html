@@ -10,10 +10,23 @@
 
   <div class="lobby-row">
     <div class="k">Players</div>
-    <div id="players" class="lobby-pllayers">-</div>
+    <div id="players" class="lobby-players">-</div>
+  </div>
+
+  <div class="lobby-row">
+    <div class="k">Class</div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <button id="clsSword" data-cls="sword">Sword</button>
+      <button id="clsBow" data-cls="bow">Bow</button>
+      <button id="clsMagic" data-cls="magic">Magic</button>
+      <div id="classHint" style="width:100%; margin-top:6px; font-size:12px; opacity:0.9;">
+        Selected: -
+      </div>
+    </div>
   </div>
 
   <button id="start" class="lobby-start" style="display:none;">Start Game</button>
+  <button id="leaveLobby" class="lobby-start" style="background:#444;">Leave Lobby</button>
 
   <div id="status" class="lobby-status"></div>
 </div>

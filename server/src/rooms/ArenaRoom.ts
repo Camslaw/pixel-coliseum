@@ -4,7 +4,6 @@ import jwt from "jsonwebtoken";
 import { ServerError } from "@colyseus/core";
 
 type JoinOptions = {
-  name?: string;
   class?: string;
 };
 
@@ -63,6 +62,13 @@ export class ArenaRoom extends Room<ArenaState> {
 
       this.state.phase = "playing";
     });
+
+    this.onMessage("set_class", (client, msg: any) => {
+      const cls = normalizeClass(msg?.class);
+      const p = this.state.players.get(client.sessionId);
+      if (!p) return;
+      p.class = cls;
+    });
   }
 
   onJoin(client: Client, options: JoinOptions) {
@@ -70,8 +76,8 @@ export class ArenaRoom extends Room<ArenaState> {
 
     const p = new Player();
     p.id = client.sessionId;
-    p.name = (auth?.displayName ?? options.name ?? "Player").slice(0, 16);
-    p.class = normalizeClass(options.class);
+    p.name = (auth?.displayName ?? "Player").slice(0, 16);
+    p.class = "sword";
 
     const used = new Set<number>();
     this.state.players.forEach((pl) => {

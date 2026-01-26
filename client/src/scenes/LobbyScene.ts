@@ -37,9 +37,32 @@ export default class LobbyScene extends Phaser.Scene {
     const hint = el.querySelector<HTMLDivElement>("#hint");
     const playersBox = el.querySelector<HTMLDivElement>("#players");
     const startBtn = el.querySelector<HTMLButtonElement>("#start");
+    const leaveBtn = el.querySelector<HTMLButtonElement>("#leaveLobby");
     const status = el.querySelector<HTMLDivElement>("#status");
+    const classHint = el.querySelector<HTMLDivElement>("#classHint");
+    const clsSword = el.querySelector<HTMLButtonElement>("#clsSword");
+    const clsBow = el.querySelector<HTMLButtonElement>("#clsBow");
+    const clsMagic = el.querySelector<HTMLButtonElement>("#clsMagic");
 
-    if (!roomIdText || !sessionIdText || !hint || !playersBox || !startBtn || !status) {
+    if (!classHint || !clsSword || !clsBow || !clsMagic) {
+      console.error("[Lobby] Missing class picker DOM nodes.");
+      return;
+    }
+
+    const setClass = (cls: "sword" | "bow" | "magic") => {
+      classHint.innerText = `Selected: ${cls}`;
+      this.room.send("set_class", { class: cls });
+    };
+
+    clsSword.onclick = () => setClass("sword");
+    clsBow.onclick = () => setClass("bow");
+    clsMagic.onclick = () => setClass("magic");
+
+    const me = (this.room.state as any).players?.get?.(this.room.sessionId);
+    if (me?.class) classHint.innerText = `Selected: ${me.class}`;
+    else setClass("sword");
+
+    if (!roomIdText || !sessionIdText || !hint || !playersBox || !startBtn || !leaveBtn || !status) {
       console.error("[Lobby] Missing expected DOM nodes. Check lobby.html ids.");
       return;
     }
@@ -99,13 +122,37 @@ export default class LobbyScene extends Phaser.Scene {
 
     startBtn.onclick = () => this.room.send("start_game");
 
+    leaveBtn.onclick = () => {
+      console.log("[Lobby] Leave clicked");
+      this.room.leave();
+    };
+
+    this.room.onLeave(() => {
+      this.uiRoot?.destroy();
+      this.uiRoot = undefined;
+      this.scene.start("match");
+    });
+
     renderLobbyUI();
     renderPlayers();
     recenter();
 
+    const tryInitMyClass = () => {
+      const players = (this.room.state as any).players;
+      const me = players?.get?.(this.room.sessionId);
+
+      if (me?.class) {
+        classHint.innerText = `Selected: ${me.class}`;
+      } else {
+        // default the first time we actually see ourselves
+        setClass("sword");
+      }
+    };
+
     this.room.onStateChange(() => {
       renderLobbyUI();
       renderPlayers();
+      tryInitMyClass();
       recenter();
 
       const phase = (this.room.state as any).phase as string;
@@ -115,12 +162,5 @@ export default class LobbyScene extends Phaser.Scene {
         this.scene.start("arena", { room: this.room });
       }
     });
-
-    this.room.onLeave(() => {
-      this.uiRoot?.destroy();
-      this.uiRoot = undefined;
-      this.scene.start("menu");
-    });
   }
-
 }
