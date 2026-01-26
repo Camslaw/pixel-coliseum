@@ -1,7 +1,13 @@
+/* Put this at the very top */
+.menu-root,
+.menu-root * {
+  box-sizing: border-box;
+}
+
 .menu-root {
   display: flex;
   flex-direction: column;
-  gap: 20px; /* vertical space between image, subtitle, labels, fields, etc. */
+  gap: 20px;
   width: 560px;
   padding: 18px;
   background: linear-gradient(180deg, #0c0e16, #080a10);
@@ -45,8 +51,6 @@
   gap: 8px;
 }
 
-
-
 .auth {
   margin: 12px 0 18px;
   padding: 12px;
@@ -54,9 +58,13 @@
   border-radius: 10px;
 }
 
-.authRow { margin-top: 8px; }
+.authRow { 
+  margin-top: 8px;
+  width: 100%;
+}
 
 .auth input {
+  display: block;
   width: 100%;
-  padding: 8px 10px;
+  max-width: 100%;
 }

@@ -106,28 +106,19 @@ export default class ArenaScene extends Phaser.Scene {
       if (obj.rotation) sprite.setRotation(Phaser.Math.DegToRad(obj.rotation));
     }
 
-    // for (const obj of objLayer.objects) {
-    //   if (!("gid" in obj) || !obj.gid) continue;
+    const leaveText = this.add
+      .text(16, 36, "Leave Game", { fontFamily: "ui-monospace, monospace", fontSize: "16px" })
+      .setScrollFactor(0)
+      .setDepth(9999)
+      .setInteractive({ useHandCursor: true });
 
-    //   const frame = obj.gid - tileset.firstgid;
-
-    //   const rawX = (obj.x ?? 0) + (obj.width ?? 0) / 2 + offsetX;
-    //   const rawY = (obj.y ?? 0) - (obj.height ?? 0) / 2 + offsetY;
-
-    //   const x = Math.round(rawX);
-    //   const y = Math.round(rawY);
-
-    //   const sprite = this.add.image(x, y, "tiles", frame);
-
-    //   if (obj.rotation) sprite.setRotation(Phaser.Math.DegToRad(obj.rotation));
-
-    //   // depth sort by y (lower on screen = in front)
-    //   sprite.setDepth(y);
-    // }
+    leaveText.on("pointerdown", () => {
+      this.room.leave(); // triggers onLeave handler (below)
+    });
 
     const hud = this.add.text(
-      16,
-      16,
+      -14,
+      64,
       `Room: ${this.room.roomId}\nYou: ${this.room.sessionId}`,
       {
         fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
@@ -141,7 +132,7 @@ export default class ArenaScene extends Phaser.Scene {
     hud.setDepth(9999);
 
     this.playerListHud = this.add.text(
-      16,
+      -54,
       hud.y + hud.height + 8,
       "",
       {
@@ -253,5 +244,9 @@ export default class ArenaScene extends Phaser.Scene {
       }
       renderPlayerList();
     };
+
+    this.room.onLeave(() => {
+      this.scene.start("match");
+    });
   }
 }

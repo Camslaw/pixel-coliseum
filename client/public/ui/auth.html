@@ -1,0 +1,44 @@
+<div class="menu-root">
+  <img class="logo" src="/assets/pc-logo.png" alt="Pixel Coliseum" />
+
+  <div class="subtitle">Sign in to play</div>
+
+  <div class="auth">
+    <div id="authStatus">Not signed in</div>
+
+    <div class="authRow">
+      <input id="email" type="email" placeholder="Email" autocomplete="email" />
+    </div>
+
+    <div class="authRow">
+      <input
+        id="password"
+        type="password"
+        placeholder="Password"
+        autocomplete="current-password"
+      />
+    </div>
+
+    <div class="authRow" id="confirmPasswordRow" style="display:none;">
+      <input
+        id="confirmPassword"
+        type="password"
+        placeholder="Confirm password"
+        autocomplete="new-password"
+      />
+    </div>
+
+    <div class="authRow" id="displayNameRow" style="display:none;">
+      <input id="displayName" type="text" placeholder="Display name" />
+    </div>
+
+    <div class="authRow" style="display:flex; gap:8px;">
+      <button id="loginBtn">Login</button>
+      <button id="signupModeBtn">Signup</button>
+      <button id="logoutBtn" style="display:none;">Logout</button>
+    </div>
+
+    <div id="authError" style="color:#ff6b6b; min-height:1.2em;"></div>
+    <div id="status" style="margin-top:10px; font-size:12px; opacity:0.9;"></div>
+  </div>
+</div>
