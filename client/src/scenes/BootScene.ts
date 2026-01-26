@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { auth } from "../auth";
 
 export default class BootScene extends Phaser.Scene {
   constructor() {
@@ -19,9 +20,15 @@ export default class BootScene extends Phaser.Scene {
       frameWidth: 48,
       frameHeight: 48,
     });
+
+    this.load.html("menu-ui", "/ui/menu.html");
+    this.load.html("lobby-ui", "/ui/lobby.html");
   }
 
   create() {
-    this.scene.start("menu");
+    (async () => {
+      await auth.restore();
+      this.scene.start("menu");
+    })();
   }
 }
