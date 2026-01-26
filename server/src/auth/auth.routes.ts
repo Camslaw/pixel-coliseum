@@ -1,6 +1,7 @@
 import { Router } from "express";
 import bcrypt from "bcrypt";
 import { pool } from "../db/pool";
+import jwt from "jsonwebtoken";
 
 export const authRouter = Router();
 
@@ -9,6 +10,15 @@ type SafeUser = {
   email: string;
   displayName: string;
 };
+
+function signToken(user: SafeUser) {
+  const secret = process.env.SESSION_SECRET ?? "dev-secret-change-me";
+  return jwt.sign(
+    { userId: user.id, email: user.email, displayName: user.displayName },
+    secret,
+    { expiresIn: "7d" }
+  );
+}
 
 function normalizeEmail(email: unknown): string {
   return String(email ?? "").trim().toLowerCase();
@@ -47,7 +57,8 @@ authRouter.post("/signup", async (req, res) => {
 
     req.session.userId = user.id;
 
-    return res.json({ user });
+    const token = signToken(user);
+    return res.json({ user, token });
   } catch (err: any) {
     // unique violation (email already exists)
     if (err?.code === "23505") return res.status(409).json({ error: "EMAIL_TAKEN" });
@@ -81,7 +92,8 @@ authRouter.post("/login", async (req, res) => {
 
     req.session.userId = user.id;
 
-    return res.json({ user });
+    const token = signToken(user);
+    return res.json({ user, token });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "SERVER_ERROR" });

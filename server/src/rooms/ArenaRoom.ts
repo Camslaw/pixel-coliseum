@@ -1,5 +1,7 @@
 import { Room, Client } from "@colyseus/core";
 import { ArenaState, Player } from "../state/ArenaState";
+import jwt from "jsonwebtoken";
+import { ServerError } from "@colyseus/core";
 
 type JoinOptions = {
   name?: string;
@@ -27,6 +29,29 @@ const SPAWNS_TILES: [SpawnTile, SpawnTile, SpawnTile, SpawnTile] = [
 ];
 
 export class ArenaRoom extends Room<ArenaState> {
+  static async onAuth(token: string, _options: any, _context: any) {
+    console.log("[ArenaRoom.onAuth] token?", !!token);
+
+    if (!token) {
+      // 4216 is just an example code; you can pick any number
+      throw new ServerError(4216, "UNAUTHENTICATED");
+    }
+
+    const secret = process.env.SESSION_SECRET ?? "dev-secret-change-me";
+
+    try {
+      const payload = jwt.verify(token, secret) as any;
+      // return becomes client.auth
+      return {
+        userId: payload.userId,
+        email: payload.email,
+        displayName: payload.displayName,
+      };
+    } catch {
+      throw new ServerError(4216, "UNAUTHENTICATED");
+    }
+  }
+
   onCreate(_options: any) {
     this.state = new ArenaState();
 
@@ -41,9 +66,11 @@ export class ArenaRoom extends Room<ArenaState> {
   }
 
   onJoin(client: Client, options: JoinOptions) {
+    const auth = client.auth as any;
+
     const p = new Player();
     p.id = client.sessionId;
-    p.name = (options.name ?? "Player").slice(0, 16);
+    p.name = (auth?.displayName ?? options.name ?? "Player").slice(0, 16);
     p.class = normalizeClass(options.class);
 
     const used = new Set<number>();
