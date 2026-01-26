@@ -44,3 +44,19 @@
   display: flex;
   gap: 8px;
 }
+
+
+
+.auth {
+  margin: 12px 0 18px;
+  padding: 12px;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 10px;
+}
+
+.authRow { margin-top: 8px; }
+
+.auth input {
+  width: 100%;
+  padding: 8px 10px;
+}
