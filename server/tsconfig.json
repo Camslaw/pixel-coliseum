@@ -10,6 +10,8 @@
     "module": "commonjs",
     "target": "ES2020",
     "types": [],
+    "rootDir": "src",
+    "outDir": "dist",
     // For nodejs:
     // "lib": ["esnext"],
     // "types": ["node"],
@@ -44,5 +46,6 @@
     "emitDecoratorMetadata": true,
     "esModuleInterop": true,
     "skipLibCheck": true
-  }
+  },
+  "include": ["src/**/*.ts"]
 }
