@@ -34,6 +34,15 @@ export default class MatchScene extends Phaser.Scene {
 
     const el = this.uiRoot.node as HTMLDivElement;
 
+    const signedInAs = el.querySelector<HTMLDivElement>("#signedInAs")!;
+
+    const displayName =
+      auth.user.displayName ??
+      auth.user.email ??
+      "Unknown";
+
+    signedInAs.innerText = `Signed in as: ${displayName}`;
+
     const roomIdInput = el.querySelector<HTMLInputElement>("#roomId")!;
     const status = el.querySelector<HTMLDivElement>("#status")!;
     const logoutBtn = el.querySelector<HTMLButtonElement>("#logout")!;

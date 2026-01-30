@@ -2,8 +2,14 @@
   <div class="lobby-title">Lobby</div>
 
   <div class="lobby-meta">
-    <div><span class="k">Room:</span> <span id="roomIdText">-</span></div>
-    <div><span class="k">You:</span> <span id="sessionIdText">-</span></div>
+    <div class="meta-line">
+      <span class="k">Room:</span>
+      <span id="roomIdText">-</span>
+
+      <button id="copyRoomId" class="copy-btn" type="button">Copy</button>
+
+      <span id="copyMsg" class="copy-msg"></span>
+    </div>
   </div>
 
   <div id="hint" class="lobby-hint">Waiting...</div>
@@ -27,6 +33,4 @@
 
   <button id="start" class="lobby-start" style="display:none;">Start Game</button>
   <button id="leaveLobby" class="lobby-start" style="background:#444;">Leave Lobby</button>
-
-  <div id="status" class="lobby-status"></div>
 </div>

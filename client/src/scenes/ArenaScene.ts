@@ -117,9 +117,9 @@ export default class ArenaScene extends Phaser.Scene {
     });
 
     const hud = this.add.text(
-      -14,
+      0,
       64,
-      `Room: ${this.room.roomId}\nYou: ${this.room.sessionId}`,
+      `Room: ${this.room.roomId}\n`,
       {
         fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
         fontSize: "14px",
@@ -132,7 +132,7 @@ export default class ArenaScene extends Phaser.Scene {
     hud.setDepth(9999);
 
     this.playerListHud = this.add.text(
-      -54,
+      0,
       hud.y + hud.height + 8,
       "",
       {
@@ -225,9 +225,9 @@ export default class ArenaScene extends Phaser.Scene {
     players.forEach((p: any, sid: string) => spawnPlayerSprite(p, sid));
     renderPlayerList();
 
-    this.scale.on("resize", () => {
-      this.playerListHud?.setPosition(this.cameras.main.width - 16, 16);
-    });
+    // this.scale.on("resize", () => {
+    //   this.playerListHud?.setPosition(this.cameras.main.width - 16, 16);
+    // });
 
     players.onAdd = (player: any, sessionId: string) => {
       spawnPlayerSprite(player, sessionId);
