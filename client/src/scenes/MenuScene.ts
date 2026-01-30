@@ -21,15 +21,6 @@ export default class MenuScene extends Phaser.Scene {
       this.client.auth.token = auth.token;
     }
 
-    // Optional: try to restore a session
-    try {
-      if (auth.token) {
-        await auth.restore();
-      }
-    } catch {
-      // ignore
-    }
-
     this.uiRoot = this.add
       .dom(this.cameras.main.centerX, this.cameras.main.centerY)
       .createFromCache("auth-ui");
@@ -72,10 +63,17 @@ export default class MenuScene extends Phaser.Scene {
     const displayNameRow = el.querySelector<HTMLDivElement>("#displayNameRow")!;
     const displayNameInput = el.querySelector<HTMLInputElement>("#displayName")!;
 
+    const authBox = el.querySelector<HTMLDivElement>("#authBox")!;
+    const verifyOnlyBox = el.querySelector<HTMLDivElement>("#verifyOnlyBox")!;
+    const verifyCodeInput = el.querySelector<HTMLInputElement>("#verifyCode")!;
+    const verifyBtn = el.querySelector<HTMLButtonElement>("#verifyBtn")!;
+    const resendBtn = el.querySelector<HTMLButtonElement>("#resendBtn")!;
+    const verifyStatus = el.querySelector<HTMLDivElement>("#verifyStatus")!;
+    const backToAuthBtn = el.querySelector<HTMLButtonElement>("#backToAuthBtn")!;
+
     const loginBtn = el.querySelector<HTMLButtonElement>("#loginBtn")!;
     const signupModeBtn = el.querySelector<HTMLButtonElement>("#signupModeBtn")!;
     const logoutBtn = el.querySelector<HTMLButtonElement>("#logoutBtn")!;
-
 
     let signupMode = false;
 
@@ -84,31 +82,60 @@ export default class MenuScene extends Phaser.Scene {
     };
 
     const goNextIfAuthed = () => {
-      if (auth.user) {
+      if (auth.user && auth.user.emailVerified) {
         if (auth.token) this.client.auth.token = auth.token;
         this.uiRoot?.destroy();
-        this.uiRoot = undefined;
-        this.scene.start("match"); // <-- next screen
+        this.scene.start("match");
       }
     };
 
+    const forceLoginMode = () => {
+      signupMode = false;
+      signupModeBtn.innerText = "Signup";
+    };
+
     const renderAuth = () => {
-      if (auth.user) {
-        authStatus.innerText = `Signed in as ${auth.user.displayName} (${auth.user.email})`;
-        logoutBtn.style.display = "inline-block";
-        loginBtn.style.display = "none";
-        signupModeBtn.style.display = "none";
-        displayNameRow.style.display = "none";
-        status.innerText = "Signed in.";
-      } else {
+      // VERIFY MODE (highest priority)
+      if (auth.pendingVerifyEmail) {
+        forceLoginMode();
+        authBox.style.display = "none";
+        verifyOnlyBox.style.display = "block";
+        verifyStatus.innerText = `Code sent to ${auth.pendingVerifyEmail}`;
+        emailInput.value = auth.pendingVerifyEmail ?? "";
+        return;
+      }
+
+      // LOGGED OUT MODE
+      if (!auth.user) {
+        authBox.style.display = "block";
+        verifyOnlyBox.style.display = "none";
+
         authStatus.innerText = "Not signed in";
         logoutBtn.style.display = "none";
         loginBtn.style.display = "inline-block";
         signupModeBtn.style.display = "inline-block";
         displayNameRow.style.display = signupMode ? "block" : "none";
         confirmPasswordRow && (confirmPasswordRow.style.display = signupMode ? "block" : "none");
-        status.innerText = "";
+
+        verifyStatus.innerText = "";
+        verifyCodeInput.value = "";
+        return;
       }
+
+      // LOGGED IN (but this should basically only happen for verified users)
+      if (auth.user.emailVerified) {
+        authBox.style.display = "none";
+        verifyOnlyBox.style.display = "none";
+        return;
+      }
+
+      // SAFETY: if user exists but unverified, force verify mode
+      forceLoginMode();
+      auth.pendingVerifyEmail = auth.user.email;
+      localStorage.setItem("pc.pendingEmail", auth.pendingVerifyEmail);
+      authBox.style.display = "none";
+      verifyOnlyBox.style.display = "block";
+      verifyStatus.innerText = `Code sent to ${auth.pendingVerifyEmail}`;
     };
 
     passwordInput.value = "";
@@ -146,12 +173,66 @@ export default class MenuScene extends Phaser.Scene {
 
         if (auth.token) this.client.auth.token = auth.token;
 
-        passwordInput.value = "";
+        // only clear password if we actually entered the game
+        renderAuth();
+        goNextIfAuthed();
+
+        // clear password only if authed+verified
+        if (auth.user?.emailVerified) {
+          passwordInput.value = "";
+        }
+      } catch (e: any) {
+        setAuthError(e?.message ?? "AUTH_FAILED");
+        renderAuth();
+      }
+    };
+
+    verifyBtn.onclick = async () => {
+      setAuthError(null);
+      verifyStatus.innerText = "";
+
+      try {
+        const code = verifyCodeInput.value.trim();
+        if (!/^\d{6}$/.test(code)) {
+          verifyStatus.innerText = "Enter the 6-digit code.";
+          return;
+        }
+
+        await auth.verifyEmail(code);
+
+        verifyCodeInput.value = "";
         renderAuth();
         goNextIfAuthed();
       } catch (e: any) {
-        setAuthError(e?.message ?? "AUTH_FAILED");
+        verifyStatus.innerText = e?.message ?? "VERIFY_FAILED";
       }
+    };
+
+    resendBtn.onclick = async () => {
+      await auth.resendVerification();
+      verifyStatus.innerText = "Code resent.";
+    };
+
+    backToAuthBtn.onclick = () => {
+      // Always return to LOGIN screen (never signup)
+      forceLoginMode();
+
+      // Clear verify flow
+      auth.pendingVerifyEmail = null;
+      localStorage.removeItem("pc.pendingEmail");
+
+      // Clear verify UI
+      verifyCodeInput.value = "";
+      verifyStatus.innerText = "";
+
+      // Optional: clear any auth error too
+      setAuthError(null);
+
+      // Show login UI
+      renderAuth();
+
+      // Optional: focus password for quick retry
+      passwordInput.focus();
     };
 
     logoutBtn.onclick = async () => {

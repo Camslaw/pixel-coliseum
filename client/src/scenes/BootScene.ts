@@ -21,13 +21,12 @@ export default class BootScene extends Phaser.Scene {
       frameHeight: 48,
     });
 
-    this.load.html("menu-ui", "/ui/menu.html");
     this.load.html("lobby-ui", "/ui/lobby.html");
   }
 
   create() {
     (async () => {
-      await auth.restore();
+      await auth.restore(); // never throws
       this.scene.start("menu");
     })();
   }
