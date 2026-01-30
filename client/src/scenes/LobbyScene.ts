@@ -33,12 +33,12 @@ export default class LobbyScene extends Phaser.Scene {
     const el = this.uiRoot.node as HTMLDivElement;
 
     const roomIdText = el.querySelector<HTMLSpanElement>("#roomIdText");
-    const sessionIdText = el.querySelector<HTMLSpanElement>("#sessionIdText");
+    const copyBtn = el.querySelector<HTMLButtonElement>("#copyRoomId");
+    const copyMsg = el.querySelector<HTMLSpanElement>("#copyMsg");
     const hint = el.querySelector<HTMLDivElement>("#hint");
     const playersBox = el.querySelector<HTMLDivElement>("#players");
     const startBtn = el.querySelector<HTMLButtonElement>("#start");
     const leaveBtn = el.querySelector<HTMLButtonElement>("#leaveLobby");
-    const status = el.querySelector<HTMLDivElement>("#status");
     const classHint = el.querySelector<HTMLDivElement>("#classHint");
     const clsSword = el.querySelector<HTMLButtonElement>("#clsSword");
     const clsBow = el.querySelector<HTMLButtonElement>("#clsBow");
@@ -62,13 +62,29 @@ export default class LobbyScene extends Phaser.Scene {
     if (me?.class) classHint.innerText = `Selected: ${me.class}`;
     else setClass("sword");
 
-    if (!roomIdText || !sessionIdText || !hint || !playersBox || !startBtn || !leaveBtn || !status) {
+    if (!roomIdText || !copyBtn || !hint || !playersBox || !startBtn || !leaveBtn) {
       console.error("[Lobby] Missing expected DOM nodes. Check lobby.html ids.");
       return;
     }
 
     roomIdText.innerText = this.room.roomId;
-    sessionIdText.innerText = this.room.sessionId;
+
+    copyBtn.onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(this.room.roomId);
+
+        if (copyMsg) {
+          copyMsg.innerText = "Copied!";
+          copyMsg.style.opacity = "1";
+
+          this.time.delayedCall(1200, () => {
+            copyMsg.style.opacity = "0";
+          });
+        }
+      } catch (err) {
+        console.error("Clipboard failed:", err);
+      }
+    };
 
     const recenter = () => {
       this.uiRoot?.updateSize();
@@ -116,8 +132,6 @@ export default class LobbyScene extends Phaser.Scene {
         hint.innerText = `Phase: ${phase}`;
         startBtn.style.display = "none";
       }
-
-      status.innerText = `Host: ${hostId || "(none)"}   Phase: ${phase}`;
     };
 
     startBtn.onclick = () => this.room.send("start_game");
