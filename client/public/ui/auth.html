@@ -3,7 +3,8 @@
 
   <div class="subtitle">Sign in to play</div>
 
-  <div class="auth">
+  <!-- LOGIN/SIGNUP BOX -->
+  <div id="authBox" class="auth">
     <div id="authStatus">Not signed in</div>
 
     <div class="authRow">
@@ -40,5 +41,30 @@
 
     <div id="authError" style="color:#ff6b6b; min-height:1.2em;"></div>
     <div id="status" style="margin-top:10px; font-size:12px; opacity:0.9;"></div>
+  </div>
+
+  <!-- VERIFY-ONLY BOX (separate) -->
+  <div id="verifyOnlyBox" class="auth" style="display:none;">
+    <div style="font-size:14px; text-align:center; margin-bottom:8px;">
+      Verify your email to continue
+    </div>
+
+    <div class="authRow">
+      <input
+        id="verifyCode"
+        type="text"
+        inputmode="numeric"
+        placeholder="6-digit code"
+        autocomplete="one-time-code"
+      />
+    </div>
+
+    <div class="authRow" style="display:flex; gap:8px;">
+      <button id="verifyBtn">Verify</button>
+      <button id="resendBtn">Resend</button>
+      <button id="backToAuthBtn">Back</button>
+    </div>
+
+    <div id="verifyStatus" style="margin-top:8px; font-size:12px; opacity:0.9;"></div>
   </div>
 </div>
