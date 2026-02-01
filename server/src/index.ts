@@ -12,20 +12,32 @@ import { ArenaRoom } from "./rooms/ArenaRoom";
 import { authRouter } from "./auth/auth.routes";
 
 const port = Number(process.env.PORT ?? 2567);
+const isProd = process.env.NODE_ENV === "production";
 
 const app = express();
+app.set("trust proxy", 1);
+
 const httpServer = createServer(app);
 
 app.use(express.json());
 
+const allowedOrigins = new Set([
+  "http://localhost:5173",
+  "https://pixelcoliseum.com",
+  "https://www.pixelcoliseum.com",
+  "https://pixel-coliseum.netlify.app",
+]);
+
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin(origin, cb) {
+      if (!origin) return cb(null, true);
+      return cb(null, allowedOrigins.has(origin));
+    },
     credentials: true,
   })
 );
 
-// 1) create the SAME session middleware for both HTTP + WS
 const sessionMiddleware = session({
   name: "pc.sid",
   secret: process.env.SESSION_SECRET ?? "dev-secret-change-me",
@@ -33,45 +45,31 @@ const sessionMiddleware = session({
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
-    sameSite: "lax",
-    secure: false,
+    sameSite: isProd ? "none" : "lax",
+    secure: isProd,
     maxAge: 1000 * 60 * 60 * 24 * 7,
   },
 });
 
-// 2) apply it to HTTP routes
 app.use(sessionMiddleware);
-
-// auth routes (HTTP)
 app.use("/auth", authRouter);
 
-// 3) apply it to WS handshake via verifyClient
 const transport = new WebSocketTransport({
   server: httpServer,
   verifyClient: (info, done) => {
     const req = info.req as any;
 
-    // minimal fake res object, required by express middleware signature
-    const res = {
-      getHeader() {},
-      setHeader() {},
-      end() {},
-    } as any;
+    const res = { getHeader() {}, setHeader() {}, end() {} } as any;
 
-    sessionMiddleware(req, res, () => {
-      // optional debug:
-      // console.log("[WS handshake] session userId =", req.session?.userId);
-      done(true);
-    });
+    sessionMiddleware(req, res, () => done(true));
   },
 });
 
 const gameServer = new Server({ transport });
-
 gameServer.define("arena", ArenaRoom).enableRealtimeListing();
 
 app.get("/", (_req, res) => res.send("Pixel Coliseum server running."));
 
-httpServer.listen(port, () => {
-  console.log(`Colyseus listening on ws://localhost:${port}`);
+httpServer.listen(port, "0.0.0.0", () => {
+  console.log(`Colyseus listening on ws://0.0.0.0:${port}`);
 });
