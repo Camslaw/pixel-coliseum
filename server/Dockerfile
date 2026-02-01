@@ -9,7 +9,7 @@ RUN npm ci
 # Copy source and build
 COPY tsconfig*.json ./
 COPY src ./src
-RUN npm run build
+RUN npm run build && test -f dist/index.js
 
 # ---- runtime stage ----
 FROM node:22-slim AS run
