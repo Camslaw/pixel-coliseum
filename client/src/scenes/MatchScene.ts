@@ -22,7 +22,7 @@ export default class MatchScene extends Phaser.Scene {
       return;
     }
 
-    this.client = new Client("ws://localhost:2567");
+    this.client = new Client(import.meta.env.VITE_WS_URL);
     this.client.auth.token = auth.token;
 
     this.uiRoot = this.add
