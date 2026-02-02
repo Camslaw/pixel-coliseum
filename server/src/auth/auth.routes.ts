@@ -57,7 +57,7 @@ authRouter.post("/signup", async (req, res) => {
     const user: SafeUser = { id: row.id, email: row.email, displayName: row.display_name };
 
     // DO NOT create a session here
-    // req.session.userId = user.id;
+    req.session.userId = user.id;
 
     // send verification code
     await createAndEmailVerification(user.id, user.email);
