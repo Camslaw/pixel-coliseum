@@ -12,7 +12,6 @@ import { ArenaRoom } from "./rooms/ArenaRoom";
 import { authRouter } from "./auth/auth.routes";
 
 const port = Number(process.env.PORT ?? 2567);
-const isProd = process.env.NODE_ENV === "production";
 
 const app = express();
 app.set("trust proxy", 1);
@@ -28,25 +27,28 @@ const allowedOrigins = new Set([
   "https://pixel-coliseum.netlify.app",
 ]);
 
+const clientOrigin =
+  process.env.CLIENT_ORIGIN ?? "http://localhost:5173";
+
 app.use(
   cors({
-    origin(origin, cb) {
-      if (!origin) return cb(null, true);
-      return cb(null, allowedOrigins.has(origin));
-    },
+    origin: clientOrigin,
     credentials: true,
   })
 );
+
+const isProd = process.env.NODE_ENV === "production";
 
 const sessionMiddleware = session({
   name: "pc.sid",
   secret: process.env.SESSION_SECRET ?? "dev-secret-change-me",
   resave: false,
   saveUninitialized: false,
+  proxy: isProd, // important behind Fly's proxy
   cookie: {
     httpOnly: true,
     sameSite: isProd ? "none" : "lax",
-    secure: isProd,
+    secure: isProd, // true in prod because HTTPS
     maxAge: 1000 * 60 * 60 * 24 * 7,
   },
 });
