@@ -43,7 +43,7 @@ app.use(
 );
 
 // optional but helpful for preflights
-app.options("*", cors());
+app.options(/.*/, cors());
 
 const isProd = process.env.NODE_ENV === "production";
 
