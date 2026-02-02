@@ -54,8 +54,9 @@ const sessionMiddleware = session({
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
-    sameSite: isProd ? "none" : "lax",
-    secure: isProd,
+    secure: true,
+    sameSite: "lax",
+    domain: ".pixelcoliseum.com",
     maxAge: 1000 * 60 * 60 * 24 * 7,
   },
 });
