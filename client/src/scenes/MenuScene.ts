@@ -15,7 +15,7 @@ export default class MenuScene extends Phaser.Scene {
   }
 
   async create() {
-    this.client = new Client("ws://localhost:2567");
+    this.client = new Client(import.meta.env.VITE_WS_URL);
 
     if (auth.token) {
       this.client.auth.token = auth.token;
