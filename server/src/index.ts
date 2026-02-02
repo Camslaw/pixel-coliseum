@@ -21,21 +21,29 @@ const httpServer = createServer(app);
 app.use(express.json());
 
 const allowedOrigins = new Set([
-  "http://localhost:5173",
-  "https://pixelcoliseum.com",
-  "https://www.pixelcoliseum.com",
-  "https://pixel-coliseum.netlify.app",
-]);
-
-const clientOrigin =
-  process.env.CLIENT_ORIGIN ?? "http://localhost:5173";
+  process.env.CLIENT_ORIGIN,          // production, e.g. https://pixelcoliseum.com
+  "http://localhost:5173",            // dev
+  "http://127.0.0.1:5173",            // dev alt
+].filter(Boolean) as string[]);
 
 app.use(
   cors({
-    origin: clientOrigin,
+    origin: (origin, callback) => {
+      // allow server-to-server / curl requests that have no Origin header
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.has(origin)) return callback(null, true);
+
+      return callback(new Error(`CORS_BLOCKED: ${origin}`));
+    },
     credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+
+// optional but helpful for preflights
+app.options("*", cors());
 
 const isProd = process.env.NODE_ENV === "production";
 
@@ -44,11 +52,10 @@ const sessionMiddleware = session({
   secret: process.env.SESSION_SECRET ?? "dev-secret-change-me",
   resave: false,
   saveUninitialized: false,
-  proxy: isProd, // important behind Fly's proxy
   cookie: {
     httpOnly: true,
     sameSite: isProd ? "none" : "lax",
-    secure: isProd, // true in prod because HTTPS
+    secure: isProd,
     maxAge: 1000 * 60 * 60 * 24 * 7,
   },
 });
