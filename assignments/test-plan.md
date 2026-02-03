@@ -4,7 +4,7 @@
 
 First, we test individual system components using simulated players, AI enemies, and seeded database data. These tests validate normal, abnormal, and boundary behavior for core gameplay mechanics such as movement, combat, AI behavior, score accumulation, chat functionality, and stat persistence. Component testing is performed in isolation where possible to ensure deterministic logic (damage, scoring, cooldowns) behaves correctly.   
 
-For the second phase, we test the full system in an interated environment consisting of the game client, server, and database. These tests simulate real gameplay sessions in an endless survival mode where players accumulate score until death. This phase validates correct interaction between AI enemies, player state, score tracking, chat, and persistent statistics such as high score and ELO rating, while also evaluating system stability during long-running sessions.
+For the second phase, we test the full system in an integrated environment consisting of the game client, server, and database. These tests simulate real gameplay sessions in an endless survival mode where players accumulate score until death. This phase validates correct interaction between AI enemies, player state, score tracking, chat, and persistent statistics such as high score and ELO rating, while also evaluating system stability during long-running sessions.
 
 ## Test Case Descriptions
 
@@ -38,7 +38,7 @@ For the second phase, we test the full system in an interated environment consis
 
 ### SV3.1 Gameplay Test 1
 
-**SV3.2** This test will ensure server-authoratative player movement.   
+**SV3.2** This test will ensure server-authoritative player movement.   
 **SV3.3** Player movement inputs are sent to the server and replicated to observing clients. Server state is compared against received updates.   
 **SV3.4 Inputs:** Movement inputs over time.   
 **SV3.5 Outputs:** Player positions remain consistent across clients and server.   
@@ -52,7 +52,7 @@ For the second phase, we test the full system in an interated environment consis
 
 ### SV4.1 Combat Test 1
 
-**SV4.2**This test will ensure that player attacks correctly damage AI enemies.   
+**SV4.2** This test will ensure that player attacks correctly damage AI enemies.   
 **SV4.3** A player attacks AI enemies at valid and invalid ranges and damages events are observed.   
 **SV4.4 Inputs:** Attack commands; enemy positions.  
 **SV4.5 Outputs:** AI health decreases only when valid hits occur.   
@@ -66,7 +66,7 @@ For the second phase, we test the full system in an interated environment consis
 
 ### SV5.1 Combat Test 2
 
-**SV5.2** This test wille ensure that enemy AI can damage the player.  
+**SV5.2** This test will ensure that enemy AI can damage the player.  
 **SV5.3** AI enemies are allowed to attack the player over time until damage is applied.   
 **SV5.4 Inputs:** AI attack behavior.   
 **SV5.5 Outputs:** Player health decreases according to damage rules.   
@@ -88,7 +88,7 @@ For the second phase, we test the full system in an interated environment consis
 **SV6.7** Whitebox.  
 **SV6.8** Functional.  
 **SV6.9** Integration.  
-**SV6.10 Results** ___.  
+**SV6.10 Results:** ___.  
 
 ---
 
@@ -151,8 +151,8 @@ For the second phase, we test the full system in an interated environment consis
 ### CH2.1 Chat Test 2
 
 **CH2.2** This test will ensure invalid or excessive chat messages are handled safely.  
-**CH2.3** Long, enmpty, or rapid messages are sent to the server.  
-**CH2.4 Inputs:** Invalid/repaid chat messages.  
+**CH2.3** Long, empty, or rapid messages are sent to the server.  
+**CH2.4 Inputs:** Invalid/repeated chat messages.  
 **CH2.5 Outputs:** Messages rejected or limited; no crash or corruption.  
 **CH2.6** Abnormal.  
 **CH2.7** Blackbox.  
@@ -165,8 +165,8 @@ For the second phase, we test the full system in an interated environment consis
 ### DB1.1 Database Test 1
 
 **DB1.2** This test will ensure that a player's high score is persisted after death.  
-**DB1.3** Player completes a survival sessiosn and dies; database is queried.   
-**DB1.4 Inputs:** Finals score at death.  
+**DB1.3** Player completes a survival session and dies; database is queried.   
+**DB1.4 Inputs:** Final score at death.  
 **DB1.5 Outputs:** High score stored if greater than previous value.  
 **DB1.6** Normal.  
 **DB1.7** Whitebox.  
@@ -190,6 +190,34 @@ For the second phase, we test the full system in an interated environment consis
 
 ---
 
+### PERF1.1 Performance Test
+
+**PERF1.2** This test will ensure the server remains stable and responsive during a long-running endless survival session.   
+**PERF1.3** Start a room with 1–4 simulated clients and run endless survival for an extended duration (e.g., 60 minutes). Spawn AI continuously at typical gameplay rates while clients send normal movement and occasional chat. Monitor server metrics (CPU, memory, tick/update rate, and network message throughput) and check that no disconnects or crashes occur.   
+**PERF1.4 Inputs:** Long-running room session; simulated player inputs; continuous AI spawns; periodic chat messages.   
+**PERF1.5 Outputs:** No server crash/hang; tick/update rate remains within acceptable bounds; memory usage does not grow unbounded (no leak behavior); clients remain connected and continue receiving state updates.   
+**PERF1.6** Normal.   
+**PERF1.7** Blackbox.   
+**PERF1.8** Performance.   
+**PERF1.9** Integration.   
+**PERF1.10 Results:** ___.  
+
+---
+
+### NET1.1 Network Test
+
+**NET1.2** This test will ensure the server handles player disconnects gracefully and cleans up room state correctly.   
+**NET1.3** Start a room with 2 clients. During active gameplay (movement, AI pursuit, and scoring), force one client to disconnect (close tab / kill process / drop connection). Observe server logs and room state to confirm the player is removed, server does not crash, and remaining client continues normally. If reconnection is supported, reconnect the client and ensure it can rejoin and receive valid state; otherwise confirm the disconnect is handled without rejoin.   
+**NET1.4 Inputs:** Active room session; player disconnect event; reconnection attempt.   
+**NET1.5 Outputs:** Disconnected player is removed from room state; no orphaned entities or stuck references; remaining players continue receiving updates; server remains stable; (optional) reconnecting player can rejoin successfully or is cleanly rejected per design.   
+**NET1.6** Abnormal.   
+**NET1.7** Blackbox.  
+**NET1.8** Functional.  
+**NET1.9** Integration.  
+**NET1.10 Results:** ___.  
+
+---
+
 ### FS1.1 Full System Test
 
 **FS1.2** This test will ensure the full system functions together in endless survival mode.  
@@ -208,15 +236,19 @@ For the second phase, we test the full system in an interated environment consis
 
 | Test ID | Normal / Abnormal / Boundary | Blackbox / Whitebox | Functional / Performance | Unit / Integration |
 |---------|------------------------------|---------------------|--------------------------|--------------------|
-| SV1     | Normal                       | Blackbox            | Functional               | Integration        |
-| SV2     | Boundary                     | Blackbox            | Functional               | Integration        |
-| SV3     | Normal                       | Whitebox            | Functional               | Integration        |
-| SV4     | Normal                       | Whitebox            | Functional               | Unit               |
-| SV5     | Normal                       | Whitebox            | Functional               | Integration        |
-| SV6     | Normal                       | Whitebox            | Functional               | Unit               |
-| AI1     | Normal                       | Blackbox            | Functional               | Integration        |
-| CH1     | Normal                       | Blackbox            | Functional               | Integration        |
-| CH2     | Abnormal                     | Blackbox            | Functional               | Integration        |
-| DB1     | Normal                       | Whitebox            | Functional               | Integration        |
-| DB2     | Normal                       | Whitebox            | Functional               | Integration        |
-| FS1     | Normal                       | Blackbox            | Functional               | Integration        |
+| SV1.1   | Normal                       | Blackbox            | Functional               | Integration        |
+| SV2.1   | Boundary                     | Blackbox            | Functional               | Integration        |
+| SV3.1   | Normal                       | Whitebox            | Functional               | Integration        |
+| SV4.1   | Normal                       | Whitebox            | Functional               | Unit               |
+| SV5.1   | Normal                       | Whitebox            | Functional               | Integration        |
+| SV6.1   | Normal                       | Whitebox            | Functional               | Integration        |
+| SV7.1   | Normal                       | Whitebox            | Functional               | Unit               |
+| SV8.1   | Boundary                     | Whitebox            | Functional               | Integration        |
+| AI1.1   | Normal                       | Blackbox            | Functional               | Integration        |
+| CH1.1   | Normal                       | Blackbox            | Functional               | Integration        |
+| CH2.1   | Abnormal                     | Blackbox            | Functional               | Integration        |
+| DB1.1   | Normal                       | Whitebox            | Functional               | Integration        |
+| DB2.1   | Normal                       | Whitebox            | Functional               | Integration        |
+| PERF1.1 | Normal                       | Blackbox            | Performance              | Integration        |
+| NET1.1  | Abnormal                     | Blackbox            | Functional               | Integration        |
+| FS1.1   | Normal                       | Blackbox            | Functional               | Integration        |
