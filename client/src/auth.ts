@@ -9,7 +9,8 @@ export type User = {
 
 class Auth {
   user: User | null = null;
-  token: string | null = localStorage.getItem("pc.token");
+
+  // used only for email verification UI
   pendingVerifyEmail: string | null = localStorage.getItem("pc.pendingEmail");
 
   async restore() {
@@ -24,12 +25,11 @@ class Auth {
 
   async login(email: string, password: string) {
     try {
-      const { user, token } = await api.login(email, password);
-      this.user = user;
-      this.token = token;
-      localStorage.setItem("pc.token", token);
+      const { user } = await api.login(email, password);
 
-      // clear pending if successful
+      this.user = user;
+
+      // clear verify flow if successful
       this.pendingVerifyEmail = null;
       localStorage.removeItem("pc.pendingEmail");
 
@@ -40,6 +40,7 @@ class Auth {
         this.pendingVerifyEmail = email.trim().toLowerCase();
         localStorage.setItem("pc.pendingEmail", this.pendingVerifyEmail);
       }
+
       throw e;
     }
   }
@@ -47,10 +48,8 @@ class Auth {
   async signup(email: string, password: string, displayName: string) {
     const { user } = await api.signup(email, password, displayName);
 
-    // ensure we are not authenticated
+    // not authenticated yet (must verify email)
     this.user = null;
-    this.token = null;
-    localStorage.removeItem("pc.token");
 
     // force verify flow
     this.pendingVerifyEmail = user.email;
@@ -62,11 +61,9 @@ class Auth {
   async verifyEmail(code: string) {
     if (!this.pendingVerifyEmail) throw new Error("MISSING_EMAIL");
 
-    const { user, token } = await api.verifyEmail(this.pendingVerifyEmail, code);
+    const { user } = await api.verifyEmail(this.pendingVerifyEmail, code);
 
     this.user = user;
-    this.token = token;
-    localStorage.setItem("pc.token", token);
 
     this.pendingVerifyEmail = null;
     localStorage.removeItem("pc.pendingEmail");
@@ -81,10 +78,10 @@ class Auth {
 
   async logout() {
     await api.logout();
+
     this.user = null;
-    this.token = null;
     this.pendingVerifyEmail = null;
-    localStorage.removeItem("pc.token");
+
     localStorage.removeItem("pc.pendingEmail");
   }
 }

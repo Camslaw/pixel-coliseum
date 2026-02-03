@@ -2,6 +2,20 @@ import Phaser from "phaser";
 import { Client } from "colyseus.js";
 import { auth } from "../auth";
 
+function getWsUrl(): string {
+  const ws = import.meta.env.VITE_WS_URL as string | undefined;
+  if (ws && ws.trim()) return ws;
+
+  const api = import.meta.env.VITE_API_URL as string | undefined;
+  if (api && api.trim()) {
+    const u = new URL(api);
+    u.protocol = u.protocol === "https:" ? "wss:" : "ws:";
+    return u.toString().replace(/\/$/, "");
+  }
+
+  return "ws://localhost:2567";
+}
+
 export default class MenuScene extends Phaser.Scene {
   private client!: Client;
   private uiRoot?: Phaser.GameObjects.DOMElement;
@@ -15,11 +29,8 @@ export default class MenuScene extends Phaser.Scene {
   }
 
   async create() {
-    this.client = new Client("ws://localhost:2567");
-
-    if (auth.token) {
-      this.client.auth.token = auth.token;
-    }
+    // using session cookies
+    this.client = new Client(getWsUrl());
 
     this.uiRoot = this.add
       .dom(this.cameras.main.centerX, this.cameras.main.centerY)
@@ -54,7 +65,7 @@ export default class MenuScene extends Phaser.Scene {
     const authError = el.querySelector<HTMLDivElement>("#authError")!;
 
     const emailInput = el.querySelector<HTMLInputElement>("#email")!;
-    
+
     const passwordInput = el.querySelector<HTMLInputElement>("#password")!;
     const confirmPasswordRow = el.querySelector<HTMLDivElement>("#confirmPasswordRow");
     const confirmPasswordInput = el.querySelector<HTMLInputElement>("#confirmPassword");
@@ -83,7 +94,6 @@ export default class MenuScene extends Phaser.Scene {
 
     const goNextIfAuthed = () => {
       if (auth.user && auth.user.emailVerified) {
-        if (auth.token) this.client.auth.token = auth.token;
         this.uiRoot?.destroy();
         this.scene.start("match");
       }
@@ -95,7 +105,7 @@ export default class MenuScene extends Phaser.Scene {
     };
 
     const renderAuth = () => {
-      // VERIFY MODE (highest priority)
+      // verify mode (highest priority)
       if (auth.pendingVerifyEmail) {
         forceLoginMode();
         authBox.style.display = "none";
@@ -105,7 +115,7 @@ export default class MenuScene extends Phaser.Scene {
         return;
       }
 
-      // LOGGED OUT MODE
+      // logged out mode
       if (!auth.user) {
         authBox.style.display = "block";
         verifyOnlyBox.style.display = "none";
@@ -122,14 +132,14 @@ export default class MenuScene extends Phaser.Scene {
         return;
       }
 
-      // LOGGED IN (but this should basically only happen for verified users)
+      // logged in mode (should basically only happen for verified users)
       if (auth.user.emailVerified) {
         authBox.style.display = "none";
         verifyOnlyBox.style.display = "none";
         return;
       }
 
-      // SAFETY: if user exists but unverified, force verify mode
+      // if user exists but unverified, force verify mode
       forceLoginMode();
       auth.pendingVerifyEmail = auth.user.email;
       localStorage.setItem("pc.pendingEmail", auth.pendingVerifyEmail);
@@ -171,13 +181,10 @@ export default class MenuScene extends Phaser.Scene {
           await auth.login(email, password);
         }
 
-        if (auth.token) this.client.auth.token = auth.token;
-
-        // only clear password if we actually entered the game
         renderAuth();
         goNextIfAuthed();
 
-        // clear password only if authed+verified
+        // clear password only if authed and verified
         if (auth.user?.emailVerified) {
           passwordInput.value = "";
         }
@@ -214,24 +221,20 @@ export default class MenuScene extends Phaser.Scene {
     };
 
     backToAuthBtn.onclick = () => {
-      // Always return to LOGIN screen (never signup)
+      // always return to LOGIN screen (never signup)
       forceLoginMode();
 
-      // Clear verify flow
+      // clear verify flow and UI
       auth.pendingVerifyEmail = null;
       localStorage.removeItem("pc.pendingEmail");
-
-      // Clear verify UI
       verifyCodeInput.value = "";
       verifyStatus.innerText = "";
 
-      // Optional: clear any auth error too
       setAuthError(null);
 
-      // Show login UI
       renderAuth();
 
-      // Optional: focus password for quick retry
+      // focus password for quick retry
       passwordInput.focus();
     };
 

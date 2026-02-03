@@ -1,7 +1,6 @@
 import { Router } from "express";
 import bcrypt from "bcrypt";
 import { pool } from "../db/pool";
-import jwt from "jsonwebtoken";
 import { createAndEmailVerification, verifyEmailCode } from "./emailVerification";
 
 export const authRouter = Router();
@@ -11,15 +10,6 @@ type SafeUser = {
   email: string;
   displayName: string;
 };
-
-function signToken(user: SafeUser) {
-  const secret = process.env.SESSION_SECRET ?? "dev-secret-change-me";
-  return jwt.sign(
-    { userId: user.id, email: user.email, displayName: user.displayName },
-    secret,
-    { expiresIn: "7d" }
-  );
-}
 
 function normalizeEmail(email: unknown): string {
   return String(email ?? "").trim().toLowerCase();
@@ -56,14 +46,8 @@ authRouter.post("/signup", async (req, res) => {
     const row = result.rows[0];
     const user: SafeUser = { id: row.id, email: row.email, displayName: row.display_name };
 
-    // DO NOT create a session here
-    req.session.userId = user.id;
-
     // send verification code
     await createAndEmailVerification(user.id, user.email);
-
-    // DO NOT mint a token here
-    // const token = signToken(user);
 
     return res.json({ user: { ...user, emailVerified: row.email_verified } });
   } catch (err: any) {
@@ -98,8 +82,7 @@ authRouter.post("/verify-email", async (req, res) => {
         displayName: userRow.display_name,
       };
       req.session.userId = safeUser.id;
-      const token = signToken(safeUser);
-      return res.json({ user: { ...safeUser, emailVerified: true }, token });
+      return res.json({ user: { ...safeUser, emailVerified: true } });
     }
 
     const result = await verifyEmailCode(userRow.id, code);
@@ -119,8 +102,7 @@ authRouter.post("/verify-email", async (req, res) => {
     // SIGN IN HERE
     req.session.userId = safeUser.id;
 
-    const token = signToken(safeUser);
-    return res.json({ user: { ...safeUser, emailVerified: row.email_verified }, token });
+    return res.json({ user: { ...safeUser, emailVerified: true } });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "SERVER_ERROR" });
@@ -180,8 +162,7 @@ authRouter.post("/login", async (req, res) => {
 
     req.session.userId = user.id;
 
-    const token = signToken(user);
-    return res.json({ user: { ...user, emailVerified: row.email_verified }, token });
+    return res.json({ user: { ...user, emailVerified: row.email_verified } });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "SERVER_ERROR" });
@@ -189,8 +170,12 @@ authRouter.post("/login", async (req, res) => {
 });
 
 authRouter.post("/logout", (req, res) => {
+  const isProd = process.env.NODE_ENV === "production";
+
   req.session.destroy(() => {
-    res.clearCookie("pc.sid");
+    res.clearCookie("pc.sid", {
+      domain: isProd ? ".pixelcoliseum.com" : undefined,
+    });
     res.json({ ok: true });
   });
 });

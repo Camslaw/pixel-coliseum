@@ -26,7 +26,7 @@ export default class BootScene extends Phaser.Scene {
 
   create() {
     (async () => {
-      await auth.restore(); // never throws
+      await auth.restore();
       this.scene.start("menu");
     })();
   }

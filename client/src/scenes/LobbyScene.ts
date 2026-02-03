@@ -21,6 +21,45 @@ export default class LobbyScene extends Phaser.Scene {
   }
 
   create() {
+    let enteredArena = false;
+
+    const onStateChange = () => {
+      renderLobbyUI();
+      renderPlayers();
+      tryInitMyClass();
+      recenter();
+
+      const phase = (this.room.state as any).phase as string;
+
+      // only run this transition once
+      if (phase === "playing" && !enteredArena) {
+        enteredArena = true;
+
+        cleanup();
+
+        this.uiRoot?.destroy();
+        this.uiRoot = undefined;
+
+        this.scene.stop("lobby");
+        this.scene.start("arena", { room: this.room });
+      }
+    };
+
+    const cleanup = () => {
+      const r: any = this.room;
+      r.off?.("statechange", onStateChange);
+      r.removeListener?.("statechange", onStateChange);
+
+      this.scale.off("resize", recenter);
+    };
+
+    // attach listener
+    this.room.onStateChange(onStateChange);
+
+    // ensure cleanup runs even if you leave or stop the scene in other ways
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, cleanup);
+    this.events.once(Phaser.Scenes.Events.DESTROY, cleanup);
+
     this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0x1d1f27).setOrigin(0);
 
     this.uiRoot = this.add
@@ -158,23 +197,8 @@ export default class LobbyScene extends Phaser.Scene {
       if (me?.class) {
         classHint.innerText = `Selected: ${me.class}`;
       } else {
-        // default the first time we actually see ourselves
         setClass("sword");
       }
     };
-
-    this.room.onStateChange(() => {
-      renderLobbyUI();
-      renderPlayers();
-      tryInitMyClass();
-      recenter();
-
-      const phase = (this.room.state as any).phase as string;
-      if (phase === "playing") {
-        this.uiRoot?.destroy();
-        this.uiRoot = undefined;
-        this.scene.start("arena", { room: this.room });
-      }
-    });
   }
 }
