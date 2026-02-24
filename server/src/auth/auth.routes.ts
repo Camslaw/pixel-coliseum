@@ -3,6 +3,7 @@ import bcrypt from "bcrypt";
 import { pool } from "../db/pool";
 import jwt from "jsonwebtoken";
 import { createAndEmailVerification, verifyEmailCode } from "./emailVerification";
+import { createAndEmailPasswordReset, consumePasswordResetCode, setUserPassword } from "./passwordReset";
 
 export const authRouter = Router();
 
@@ -212,6 +213,87 @@ authRouter.get("/me", async (req, res) => {
 
     const user: SafeUser = { id: row.id, email: row.email, displayName: row.display_name };
     return res.json({ user: { ...user, emailVerified: row.email_verified } });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "SERVER_ERROR" });
+  }
+});
+
+authRouter.post("/request-password-reset", async (req, res) => {
+  try {
+    const email = normalizeEmail(req.body?.email);
+    if (!isValidEmail(email)) return res.status(400).json({ error: "INVALID_EMAIL" });
+
+    const u = await pool.query(
+      `SELECT id, email FROM users WHERE email = $1`,
+      [email]
+    );
+    const row = u.rows[0];
+
+    // Always respond ok (avoid enumeration)
+    if (!row) return res.json({ ok: true });
+
+    await createAndEmailPasswordReset(row.id, row.email);
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "SERVER_ERROR" });
+  }
+});
+
+authRouter.post("/reset-password", async (req, res) => {
+  try {
+    const email = normalizeEmail(req.body?.email);
+    const code = String(req.body?.code ?? "").trim();
+    const newPassword = req.body?.newPassword;
+
+    if (!isValidEmail(email)) return res.status(400).json({ error: "INVALID_EMAIL" });
+    if (!/^\d{6}$/.test(code)) return res.status(400).json({ error: "INVALID_CODE" });
+    if (!isValidPassword(newPassword)) return res.status(400).json({ error: "INVALID_PASSWORD" });
+
+    const u = await pool.query(
+      `SELECT id FROM users WHERE email = $1`,
+      [email]
+    );
+    const row = u.rows[0];
+    if (!row) return res.status(400).json({ error: "CODE_INVALID_OR_EXPIRED" });
+
+    const consumed = await consumePasswordResetCode(row.id, code);
+    if (!consumed.ok) return res.status(400).json({ error: "CODE_INVALID_OR_EXPIRED" });
+
+    await setUserPassword(row.id, newPassword);
+
+    // Optional: DO NOT auto-login; simplest is "success, go login"
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "SERVER_ERROR" });
+  }
+});
+
+authRouter.post("/change-password", async (req, res) => {
+  try {
+    const userId = req.session.userId;
+    if (!userId) return res.status(401).json({ error: "UNAUTHENTICATED" });
+
+    const currentPassword = req.body?.currentPassword;
+    const newPassword = req.body?.newPassword;
+
+    if (!isValidPassword(currentPassword)) return res.status(400).json({ error: "INVALID_PASSWORD" });
+    if (!isValidPassword(newPassword)) return res.status(400).json({ error: "INVALID_PASSWORD" });
+
+    const r = await pool.query(
+      `SELECT password_hash FROM users WHERE id = $1`,
+      [userId]
+    );
+    const row = r.rows[0];
+    if (!row) return res.status(401).json({ error: "UNAUTHENTICATED" });
+
+    const ok = await bcrypt.compare(currentPassword, row.password_hash);
+    if (!ok) return res.status(401).json({ error: "INVALID_CREDENTIALS" });
+
+    await setUserPassword(userId, newPassword);
+    return res.json({ ok: true });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "SERVER_ERROR" });

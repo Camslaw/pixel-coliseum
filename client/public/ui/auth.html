@@ -37,6 +37,7 @@
       <button id="loginBtn">Login</button>
       <button id="signupModeBtn">Signup</button>
       <button id="logoutBtn" style="display:none;">Logout</button>
+      <button id="forgotBtn" type="button">Forgot Password</button>
     </div>
 
     <div id="authError" style="color:#ff6b6b; min-height:1.2em;"></div>
@@ -66,5 +67,52 @@
     </div>
 
     <div id="verifyStatus" style="margin-top:8px; font-size:12px; opacity:0.9;"></div>
+  </div>
+
+  <!-- RESET PASSWORD BOX -->
+  <div id="resetBox" class="auth" style="display:none;">
+    <div style="font-size:14px; text-align:center; margin-bottom:8px;">
+      Reset your password
+    </div>
+
+    <div class="authRow">
+      <input id="resetEmail" type="email" placeholder="Email" autocomplete="email" />
+    </div>
+
+    <div class="authRow">
+      <input
+        id="resetCode"
+        type="text"
+        inputmode="numeric"
+        placeholder="6-digit code"
+        autocomplete="one-time-code"
+      />
+    </div>
+
+    <div class="authRow">
+      <input
+        id="resetNewPassword"
+        type="password"
+        placeholder="New password"
+        autocomplete="new-password"
+      />
+    </div>
+
+    <div class="authRow">
+      <input
+        id="resetConfirmPassword"
+        type="password"
+        placeholder="Confirm new password"
+        autocomplete="new-password"
+      />
+    </div>
+
+    <div class="authRow" style="display:flex; gap:8px;">
+      <button id="sendResetCodeBtn">Send code</button>
+      <button id="doResetBtn">Reset</button>
+      <button id="resetBackBtn">Back</button>
+    </div>
+
+    <div id="resetStatus" style="margin-top:8px; font-size:12px; opacity:0.9;"></div>
   </div>
 </div>

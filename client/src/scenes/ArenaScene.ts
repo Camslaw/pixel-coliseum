@@ -13,12 +13,40 @@ export default class ArenaScene extends Phaser.Scene {
 
   private playerListHud?: Phaser.GameObjects.Text;
 
+  private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
+  private wasd!: { W: Phaser.Input.Keyboard.Key; A: Phaser.Input.Keyboard.Key; S: Phaser.Input.Keyboard.Key; D: Phaser.Input.Keyboard.Key };
+  private moveLocked = false;
+
   constructor() {
     super("arena");
   }
 
   init(data: ArenaSceneData) {
     this.room = data.room;
+  }
+
+  update() {
+    if (!this.room) return;
+    if (this.moveLocked) return;
+
+    const left  = Phaser.Input.Keyboard.JustDown(this.cursors.left)  || Phaser.Input.Keyboard.JustDown(this.wasd.A);
+    const right = Phaser.Input.Keyboard.JustDown(this.cursors.right) || Phaser.Input.Keyboard.JustDown(this.wasd.D);
+    const up    = Phaser.Input.Keyboard.JustDown(this.cursors.up)    || Phaser.Input.Keyboard.JustDown(this.wasd.W);
+    const down  = Phaser.Input.Keyboard.JustDown(this.cursors.down)  || Phaser.Input.Keyboard.JustDown(this.wasd.S);
+
+    let dx = 0, dy = 0;
+    if (left) dx = -1;
+    else if (right) dx = 1;
+    else if (up) dy = -1;
+    else if (down) dy = 1;
+    else return;
+
+    // send to server
+    this.room.send("move", { dx, dy });
+
+    // simple "rate limit" so you don't spam while waiting for state
+    this.moveLocked = true;
+    this.time.delayedCall(120, () => (this.moveLocked = false));
   }
 
   private drawDebugGrid(map: Phaser.Tilemaps.Tilemap, offsetX: number, offsetY: number) {
@@ -190,13 +218,24 @@ export default class ArenaScene extends Phaser.Scene {
 
       player.onChange = () => {
         const pos = tileToWorldFeet(player.tx, player.ty);
-
-        // pixel-perfect (optional but safe)
         const x = Math.round(pos.x);
         const y = Math.round(pos.y);
 
-        sprite.setPosition(x, y);
-        label.setPosition(x, y - sprite.displayHeight - 6);
+        this.tweens.killTweensOf(sprite);
+
+        this.tweens.add({
+          targets: sprite,
+          x,
+          y,
+          duration: 120,
+          onUpdate: () => {
+            label.setPosition(sprite.x, sprite.y - NAME_Y_OFFSET);
+          },
+          onComplete: () => {
+            label.setPosition(x, y - NAME_Y_OFFSET);
+          }
+        });
+
         label.setText(player.name ?? "Player");
         renderPlayerList();
       };
@@ -221,6 +260,9 @@ export default class ArenaScene extends Phaser.Scene {
         ["Players:", ...(lines.length ? lines : ["-"])].join("\n")
       );
     };
+
+    this.cursors = this.input.keyboard!.createCursorKeys();
+    this.wasd = this.input.keyboard!.addKeys("W,A,S,D") as any;
 
     players.forEach((p: any, sid: string) => spawnPlayerSprite(p, sid));
     renderPlayerList();

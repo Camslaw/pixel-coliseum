@@ -19,3 +19,18 @@ export async function sendVerificationCode(to: string, code: string) {
     text: `Your verification code is: ${code}\n\nThis code expires in 10 minutes.`,
   });
 }
+
+export async function sendPasswordResetCode(to: string, code: string) {
+  const from = process.env.SMTP_FROM ?? "no-reply@localhost";
+
+  await transporter.sendMail({
+    from,
+    to,
+    subject: "Your Pixel Coliseum password reset code",
+    text:
+      `You requested a password reset for your Pixel Coliseum account.\n\n` +
+      `Your reset code is: ${code}\n\n` +
+      `This code expires in 10 minutes.\n\n` +
+      `If you did not request this, you can safely ignore this email.`,
+  });
+}

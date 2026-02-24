@@ -75,6 +75,17 @@ export default class MenuScene extends Phaser.Scene {
     const signupModeBtn = el.querySelector<HTMLButtonElement>("#signupModeBtn")!;
     const logoutBtn = el.querySelector<HTMLButtonElement>("#logoutBtn")!;
 
+    const resetBox = el.querySelector<HTMLDivElement>("#resetBox")!;
+    const forgotBtn = el.querySelector<HTMLButtonElement>("#forgotBtn")!;
+    const resetEmailInput = el.querySelector<HTMLInputElement>("#resetEmail")!;
+    const resetCodeInput = el.querySelector<HTMLInputElement>("#resetCode")!;
+    const resetNewPwInput = el.querySelector<HTMLInputElement>("#resetNewPassword")!;
+    const resetConfirmPwInput = el.querySelector<HTMLInputElement>("#resetConfirmPassword")!;
+    const sendResetCodeBtn = el.querySelector<HTMLButtonElement>("#sendResetCodeBtn")!;
+    const doResetBtn = el.querySelector<HTMLButtonElement>("#doResetBtn")!;
+    const resetBackBtn = el.querySelector<HTMLButtonElement>("#resetBackBtn")!;
+    const resetStatus = el.querySelector<HTMLDivElement>("#resetStatus")!;
+
     let signupMode = false;
 
     const setAuthError = (msg: string | null) => {
@@ -95,20 +106,35 @@ export default class MenuScene extends Phaser.Scene {
     };
 
     const renderAuth = () => {
-      // VERIFY MODE (highest priority)
+      // 1) VERIFY MODE (highest priority)
       if (auth.pendingVerifyEmail) {
         forceLoginMode();
         authBox.style.display = "none";
         verifyOnlyBox.style.display = "block";
+        resetBox.style.display = "none";
         verifyStatus.innerText = `Code sent to ${auth.pendingVerifyEmail}`;
         emailInput.value = auth.pendingVerifyEmail ?? "";
         return;
       }
 
-      // LOGGED OUT MODE
+      // 2) RESET MODE (next priority)
+      // RESET MODE (next priority)
+      if (auth.pendingResetEmail !== null) {
+        forceLoginMode();
+        authBox.style.display = "none";
+        verifyOnlyBox.style.display = "none";
+        resetBox.style.display = "block";
+
+        resetEmailInput.value = auth.pendingResetEmail ?? "";
+        resetStatus.innerText = "";
+        return;
+      }
+
+      // 3) LOGGED OUT MODE
       if (!auth.user) {
         authBox.style.display = "block";
         verifyOnlyBox.style.display = "none";
+        resetBox.style.display = "none";
 
         authStatus.innerText = "Not signed in";
         logoutBtn.style.display = "none";
@@ -122,19 +148,21 @@ export default class MenuScene extends Phaser.Scene {
         return;
       }
 
-      // LOGGED IN (but this should basically only happen for verified users)
+      // 4) LOGGED IN
       if (auth.user.emailVerified) {
         authBox.style.display = "none";
         verifyOnlyBox.style.display = "none";
+        resetBox.style.display = "none";
         return;
       }
 
-      // SAFETY: if user exists but unverified, force verify mode
+      // 5) SAFETY: logged in but unverified -> force verify
       forceLoginMode();
       auth.pendingVerifyEmail = auth.user.email;
       localStorage.setItem("pc.pendingEmail", auth.pendingVerifyEmail);
       authBox.style.display = "none";
       verifyOnlyBox.style.display = "block";
+      resetBox.style.display = "none";
       verifyStatus.innerText = `Code sent to ${auth.pendingVerifyEmail}`;
     };
 
@@ -242,6 +270,79 @@ export default class MenuScene extends Phaser.Scene {
       passwordInput.value = "";
       renderAuth();
       status.innerText = "Logged out.";
+    };
+
+    forgotBtn.onclick = () => {
+      const e = emailInput.value.trim().toLowerCase();
+
+      // Enter reset mode even if e is ""
+      auth.pendingResetEmail = e;
+      localStorage.setItem("pc.pendingResetEmail", e);
+
+      // seed reset screen
+      resetEmailInput.value = e;
+      resetStatus.innerText = "";
+
+      renderAuth();
+    };
+
+    sendResetCodeBtn.onclick = async () => {
+      setAuthError(null);
+      resetStatus.innerText = "";
+
+      try {
+        const e = resetEmailInput.value.trim().toLowerCase();
+        await auth.requestPasswordReset(e);
+        resetStatus.innerText = `Code sent to ${e}`;
+      } catch (err: any) {
+        resetStatus.innerText = err?.message ?? "RESET_REQUEST_FAILED";
+      }
+    };
+
+    doResetBtn.onclick = async () => {
+      setAuthError(null);
+      resetStatus.innerText = "";
+
+      const code = resetCodeInput.value.trim();
+      const pw = resetNewPwInput.value;
+      const confirm = resetConfirmPwInput.value;
+
+      if (!/^\d{6}$/.test(code)) {
+        resetStatus.innerText = "Enter the 6-digit code.";
+        return;
+      }
+      if (pw !== confirm) {
+        resetStatus.innerText = "Passwords do not match.";
+        return;
+      }
+
+      try {
+        await auth.resetPassword(code, pw);
+
+        // return to login
+        resetCodeInput.value = "";
+        resetNewPwInput.value = "";
+        resetConfirmPwInput.value = "";
+        passwordInput.value = "";
+
+        resetStatus.innerText = "Password reset. Please log in.";
+        renderAuth();
+      } catch (err: any) {
+        resetStatus.innerText = err?.message ?? "RESET_FAILED";
+      }
+    };
+
+    resetBackBtn.onclick = () => {
+      auth.pendingResetEmail = null;
+      localStorage.removeItem("pc.pendingResetEmail");
+
+      resetEmailInput.value = "";
+      resetCodeInput.value = "";
+      resetNewPwInput.value = "";
+      resetConfirmPwInput.value = "";
+      resetStatus.innerText = "";
+
+      renderAuth();
     };
   }
 }

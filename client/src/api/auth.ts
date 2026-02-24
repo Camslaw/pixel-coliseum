@@ -67,3 +67,31 @@ export async function me() {
 export async function logout() {
   await fetch(url("/auth/logout"), { method: "POST", credentials: "include" });
 }
+
+export async function requestPasswordReset(email: string) {
+  const r = await fetch(url("/auth/request-password-reset"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ email }),
+  });
+
+  const data = await r.json().catch(() => ({}));
+
+  // NOTE: server should usually return { ok: true } even if email not found
+  if (!r.ok) throw new Error((data as any).error ?? "RESET_REQUEST_FAILED");
+  return data as { ok: true };
+}
+
+export async function resetPassword(email: string, code: string, newPassword: string) {
+  const r = await fetch(url("/auth/reset-password"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ email, code, newPassword }),
+  });
+
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error((data as any).error ?? "RESET_FAILED");
+  return data as { ok: true };
+}

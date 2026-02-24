@@ -11,6 +11,7 @@ class Auth {
   user: User | null = null;
   token: string | null = localStorage.getItem("pc.token");
   pendingVerifyEmail: string | null = localStorage.getItem("pc.pendingEmail");
+  pendingResetEmail: string | null = localStorage.getItem("pc.pendingResetEmail");
 
   async restore() {
     try {
@@ -84,8 +85,24 @@ class Auth {
     this.user = null;
     this.token = null;
     this.pendingVerifyEmail = null;
+    this.pendingResetEmail = null;
     localStorage.removeItem("pc.token");
     localStorage.removeItem("pc.pendingEmail");
+    localStorage.removeItem("pc.pendingResetEmail");
+  }
+
+  async requestPasswordReset(email: string) {
+    const e = email.trim().toLowerCase();
+    await api.requestPasswordReset(e);
+    this.pendingResetEmail = e;
+    localStorage.setItem("pc.pendingResetEmail", e);
+  }
+
+  async resetPassword(code: string, newPassword: string) {
+    if (!this.pendingResetEmail) throw new Error("MISSING_EMAIL");
+    await api.resetPassword(this.pendingResetEmail, code, newPassword);
+    this.pendingResetEmail = null;
+    localStorage.removeItem("pc.pendingResetEmail");
   }
 }
 

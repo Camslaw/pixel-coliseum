@@ -69,6 +69,32 @@ export class ArenaRoom extends Room<ArenaState> {
       if (!p) return;
       p.class = cls;
     });
+
+    this.onMessage("move", (client, msg: any) => {
+      if (this.state.phase !== "playing") return;
+
+      const p = this.state.players.get(client.sessionId);
+      if (!p) return;
+
+      const dx = Number(msg?.dx ?? 0);
+      const dy = Number(msg?.dy ?? 0);
+
+      // only allow 4-direction step of 1 tile
+      const isCardinalStep =
+        (Math.abs(dx) === 1 && dy === 0) || (Math.abs(dy) === 1 && dx === 0);
+
+      if (!isCardinalStep) return;
+
+      const nx = p.tx + dx;
+      const ny = p.ty + dy;
+
+      // basic bounds (no collisions yet)
+      if (nx < 0 || nx >= MAP_W_TILES) return;
+      if (ny < 0 || ny >= MAP_H_TILES) return;
+
+      p.tx = nx;
+      p.ty = ny;
+    });
   }
 
   onJoin(client: Client, options: JoinOptions) {
