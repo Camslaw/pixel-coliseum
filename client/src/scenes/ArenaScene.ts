@@ -13,40 +13,12 @@ export default class ArenaScene extends Phaser.Scene {
 
   private playerListHud?: Phaser.GameObjects.Text;
 
-  private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
-  private wasd!: { W: Phaser.Input.Keyboard.Key; A: Phaser.Input.Keyboard.Key; S: Phaser.Input.Keyboard.Key; D: Phaser.Input.Keyboard.Key };
-  private moveLocked = false;
-
   constructor() {
     super("arena");
   }
 
   init(data: ArenaSceneData) {
     this.room = data.room;
-  }
-
-  update() {
-    if (!this.room) return;
-    if (this.moveLocked) return;
-
-    const left  = Phaser.Input.Keyboard.JustDown(this.cursors.left)  || Phaser.Input.Keyboard.JustDown(this.wasd.A);
-    const right = Phaser.Input.Keyboard.JustDown(this.cursors.right) || Phaser.Input.Keyboard.JustDown(this.wasd.D);
-    const up    = Phaser.Input.Keyboard.JustDown(this.cursors.up)    || Phaser.Input.Keyboard.JustDown(this.wasd.W);
-    const down  = Phaser.Input.Keyboard.JustDown(this.cursors.down)  || Phaser.Input.Keyboard.JustDown(this.wasd.S);
-
-    let dx = 0, dy = 0;
-    if (left) dx = -1;
-    else if (right) dx = 1;
-    else if (up) dy = -1;
-    else if (down) dy = 1;
-    else return;
-
-    // send to server
-    this.room.send("move", { dx, dy });
-
-    // simple "rate limit" so you don't spam while waiting for state
-    this.moveLocked = true;
-    this.time.delayedCall(120, () => (this.moveLocked = false));
   }
 
   private drawDebugGrid(map: Phaser.Tilemaps.Tilemap, offsetX: number, offsetY: number) {
@@ -85,7 +57,7 @@ export default class ArenaScene extends Phaser.Scene {
     g.lineStyle(2, 0xffff00, 0.6);
     g.strokeRect(startX, startY, w, h);
 
-    // optional: show tile coordinates every N tiles
+    // show tile coordinates every N tiles
     const labelEvery = 5;
     for (let ty = 0; ty < map.height; ty += labelEvery) {
       for (let tx = 0; tx < map.width; tx += labelEvery) {
@@ -103,6 +75,20 @@ export default class ArenaScene extends Phaser.Scene {
   }
 
   create() {
+    console.log("[Arena] create() running");
+    console.log("[Arena] create()", {
+      time: Date.now(),
+      sceneActive: this.scene.isActive("arena"),
+      sceneVisible: this.scene.isVisible("arena"),
+    });
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      console.log("[Arena] SHUTDOWN");
+    });
+
+    this.events.once(Phaser.Scenes.Events.DESTROY, () => {
+      console.log("[Arena] DESTROY");
+    });
     const map = this.make.tilemap({ key: "arena-map" });
     const tileset = map.addTilesetImage("arena-tileset", "tiles");
     if (!tileset) throw new Error("Tileset mapping failed.");
@@ -114,8 +100,33 @@ export default class ArenaScene extends Phaser.Scene {
 
     const tileToWorldFeet = (tx: number, ty: number) => ({
       x: offsetX + (tx + 0.5) * TILE,
-      y: offsetY + (ty + 1) * TILE, // bottom edge of tile (feet)
+      y: offsetY + (ty + 1) * TILE,
     });
+
+    const players = (this.room.state as any).players;
+    if (!players) {
+      console.warn("Room state has no players map yet.");
+      return;
+    }
+
+    const updateSpriteFromState = (sid: string) => {
+      const p = players.get(sid);
+      const sprite = this.playerSprites.get(sid);
+      if (!p || !sprite) return;
+
+      const pos = tileToWorldFeet(p.tx, p.ty);
+      const x = Math.round(pos.x);
+      const y = Math.round(pos.y);
+
+      sprite.setPosition(x, y);
+
+      const label = (sprite as any).__label as Phaser.GameObjects.Text | undefined;
+      if (label) {
+        const NAME_Y_OFFSET = 1.35 * TILE;
+        label.setPosition(x, y - NAME_Y_OFFSET);
+        label.setText(p.name ?? "Player");
+      }
+    };
 
     // this.drawDebugGrid(map, offsetX, offsetY);
 
@@ -141,7 +152,7 @@ export default class ArenaScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true });
 
     leaveText.on("pointerdown", () => {
-      this.room.leave(); // triggers onLeave handler (below)
+      this.room.leave();
     });
 
     const hud = this.add.text(
@@ -174,12 +185,6 @@ export default class ArenaScene extends Phaser.Scene {
     this.playerListHud.setScrollFactor(0);
     this.playerListHud.setDepth(9999);
 
-    const players = (this.room.state as any).players;
-    if (!players) {
-      console.warn("Room state has no players map yet.");
-      return;
-    }
-
     const PLAYER_DEPTH = 50;
 
     const spawnPlayerSprite = (player: any, sessionId: string) => {
@@ -197,9 +202,7 @@ export default class ArenaScene extends Phaser.Scene {
       // cross.strokeLineShape(new Phaser.Geom.Line(pos.x - 6, pos.y, pos.x + 6, pos.y));
       // cross.strokeLineShape(new Phaser.Geom.Line(pos.x, pos.y - 6, pos.x, pos.y + 6));
 
-      // sprite.setScale(1);
-
-      const NAME_Y_OFFSET = 1.35 * TILE; // centered in tile above the feet tile
+      const NAME_Y_OFFSET = 1.35 * TILE;
 
       const label = this.add.text(
         pos.x,
@@ -215,30 +218,6 @@ export default class ArenaScene extends Phaser.Scene {
       .setDepth(PLAYER_DEPTH + 1);
 
       (sprite as any).__label = label;
-
-      player.onChange = () => {
-        const pos = tileToWorldFeet(player.tx, player.ty);
-        const x = Math.round(pos.x);
-        const y = Math.round(pos.y);
-
-        this.tweens.killTweensOf(sprite);
-
-        this.tweens.add({
-          targets: sprite,
-          x,
-          y,
-          duration: 120,
-          onUpdate: () => {
-            label.setPosition(sprite.x, sprite.y - NAME_Y_OFFSET);
-          },
-          onComplete: () => {
-            label.setPosition(x, y - NAME_Y_OFFSET);
-          }
-        });
-
-        label.setText(player.name ?? "Player");
-        renderPlayerList();
-      };
 
       this.playerSprites.set(sessionId, sprite);
     };
@@ -261,22 +240,32 @@ export default class ArenaScene extends Phaser.Scene {
       );
     };
 
-    this.cursors = this.input.keyboard!.createCursorKeys();
-    this.wasd = this.input.keyboard!.addKeys("W,A,S,D") as any;
-
     players.forEach((p: any, sid: string) => spawnPlayerSprite(p, sid));
+    players.forEach((_p: any, sid: string) => updateSpriteFromState(sid));
     renderPlayerList();
 
-    // this.scale.on("resize", () => {
-    //   this.playerListHud?.setPosition(this.cameras.main.width - 16, 16);
-    // });
-
-    players.onAdd = (player: any, sessionId: string) => {
-      spawnPlayerSprite(player, sessionId);
+    const onState = () => {
+      players.forEach((_p: any, sid: string) => {
+        if (!this.playerSprites.has(sid)) {
+          spawnPlayerSprite(players.get(sid), sid);
+        }
+        updateSpriteFromState(sid);
+      });
       renderPlayerList();
+
+      const me = players.get(this.room.sessionId);
+      if (me) console.log("[Arena] patched me", me.tx, me.ty);
     };
 
+    const unsubscribeState = this.room.onStateChange(onState);
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      try { (unsubscribeState as any)?.(); } catch {}
+    });
+
     players.onRemove = (_player: any, sessionId: string) => {
+      console.log("[client] players.onRemove", sessionId, _player?.name, _player?.tx, _player?.ty);
+
       const sprite = this.playerSprites.get(sessionId);
       if (sprite) {
         const label = (sprite as any).__label as Phaser.GameObjects.Text | undefined;
@@ -290,5 +279,42 @@ export default class ArenaScene extends Phaser.Scene {
     this.room.onLeave(() => {
       this.scene.start("match");
     });
+
+    const onKeyDown = (ev: KeyboardEvent) => {
+      console.log("[Arena] keydown:", ev.code);
+
+      let dx = 0, dy = 0;
+      switch (ev.code) {
+        case "KeyA":
+        case "ArrowLeft":  dx = -1; break;
+        case "KeyD":
+        case "ArrowRight": dx =  1; break;
+        case "KeyW":
+        case "ArrowUp":    dy = -1; break;
+        case "KeyS":
+        case "ArrowDown":  dy =  1; break;
+        default: return;
+      }
+
+      console.log("[Arena] sending move", { dx, dy });
+      this.room.send("move", { dx, dy });
+    };
+
+    console.log("[Arena] input enabled?", this.input?.enabled);
+    console.log("[Arena] keyboard plugin?", !!this.input?.keyboard);
+
+    // give the canvas focus on click so keydown works reliably
+    this.game.canvas?.setAttribute("tabindex", "0");
+    this.game.canvas?.addEventListener("pointerdown", () => {
+      this.game.canvas?.focus();
+      console.log("[Arena] canvas focused");
+    });
+
+    this.input.keyboard!.on("keydown", onKeyDown);
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.input.keyboard!.off("keydown", onKeyDown);
+    });
+
   }
 }

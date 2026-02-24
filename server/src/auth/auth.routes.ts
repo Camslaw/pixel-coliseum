@@ -1,7 +1,6 @@
 import { Router } from "express";
 import bcrypt from "bcrypt";
 import { pool } from "../db/pool";
-import jwt from "jsonwebtoken";
 import { createAndEmailVerification, verifyEmailCode } from "./emailVerification";
 import { createAndEmailPasswordReset, consumePasswordResetCode, setUserPassword } from "./passwordReset";
 
@@ -13,21 +12,12 @@ type SafeUser = {
   displayName: string;
 };
 
-function signToken(user: SafeUser) {
-  const secret = process.env.SESSION_SECRET ?? "dev-secret-change-me";
-  return jwt.sign(
-    { userId: user.id, email: user.email, displayName: user.displayName },
-    secret,
-    { expiresIn: "7d" }
-  );
-}
-
 function normalizeEmail(email: unknown): string {
   return String(email ?? "").trim().toLowerCase();
 }
 
 function isValidEmail(email: string): boolean {
-  // minimal validation (good enough for now)
+  // minimal validation for now
   return email.includes("@") && email.includes(".");
 }
 
@@ -57,14 +47,8 @@ authRouter.post("/signup", async (req, res) => {
     const row = result.rows[0];
     const user: SafeUser = { id: row.id, email: row.email, displayName: row.display_name };
 
-    // DO NOT create a session here
-    req.session.userId = user.id;
-
     // send verification code
     await createAndEmailVerification(user.id, user.email);
-
-    // DO NOT mint a token here
-    // const token = signToken(user);
 
     return res.json({ user: { ...user, emailVerified: row.email_verified } });
   } catch (err: any) {
@@ -91,7 +75,7 @@ authRouter.post("/verify-email", async (req, res) => {
     const userRow = u.rows[0];
     if (!userRow) return res.status(400).json({ error: "INVALID_CODE" }); // avoid enumeration
 
-    // If already verified, just sign them in (nice UX)
+    // If already verified, just sign them in
     if (userRow.email_verified) {
       const safeUser: SafeUser = {
         id: userRow.id,
@@ -99,14 +83,13 @@ authRouter.post("/verify-email", async (req, res) => {
         displayName: userRow.display_name,
       };
       req.session.userId = safeUser.id;
-      const token = signToken(safeUser);
-      return res.json({ user: { ...safeUser, emailVerified: true }, token });
+      return res.json({ user: { ...safeUser, emailVerified: true } });
     }
 
     const result = await verifyEmailCode(userRow.id, code);
     if (!result.ok) return res.status(400).json({ error: "CODE_INVALID_OR_EXPIRED" });
 
-    // Re-read to ensure verified flag is true
+    // re-read to ensure verified flag is true
     const v = await pool.query(
       `SELECT id, email, display_name, email_verified
        FROM users
@@ -120,8 +103,7 @@ authRouter.post("/verify-email", async (req, res) => {
     // SIGN IN HERE
     req.session.userId = safeUser.id;
 
-    const token = signToken(safeUser);
-    return res.json({ user: { ...safeUser, emailVerified: row.email_verified }, token });
+    return res.json({ user: { ...safeUser, emailVerified: true } });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "SERVER_ERROR" });
@@ -181,8 +163,7 @@ authRouter.post("/login", async (req, res) => {
 
     req.session.userId = user.id;
 
-    const token = signToken(user);
-    return res.json({ user: { ...user, emailVerified: row.email_verified }, token });
+    return res.json({ user: { ...user, emailVerified: true } });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "SERVER_ERROR" });
@@ -190,8 +171,12 @@ authRouter.post("/login", async (req, res) => {
 });
 
 authRouter.post("/logout", (req, res) => {
+  const isProd = process.env.NODE_ENV === "production";
+
   req.session.destroy(() => {
-    res.clearCookie("pc.sid");
+    res.clearCookie("pc.sid", {
+      domain: isProd ? ".pixelcoliseum.com" : undefined,
+    });
     res.json({ ok: true });
   });
 });
@@ -230,7 +215,7 @@ authRouter.post("/request-password-reset", async (req, res) => {
     );
     const row = u.rows[0];
 
-    // Always respond ok (avoid enumeration)
+    // always respond ok (avoid enumeration)
     if (!row) return res.json({ ok: true });
 
     await createAndEmailPasswordReset(row.id, row.email);
@@ -263,7 +248,7 @@ authRouter.post("/reset-password", async (req, res) => {
 
     await setUserPassword(row.id, newPassword);
 
-    // Optional: DO NOT auto-login; simplest is "success, go login"
+    // do not auto-login; simplest is "success, go login"
     return res.json({ ok: true });
   } catch (err) {
     console.error(err);

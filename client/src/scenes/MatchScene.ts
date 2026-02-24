@@ -3,6 +3,22 @@ import { Client } from "colyseus.js";
 import { auth } from "../auth";
 import type { Room } from "colyseus.js";
 
+function getWsUrl(): string {
+  const ws = import.meta.env.VITE_WS_URL as string | undefined;
+  if (ws && ws.trim()) return ws;
+
+  const api = import.meta.env.VITE_API_URL as string | undefined;
+  if (api && api.trim()) {
+    const u = new URL(api);
+    u.protocol = u.protocol === "https:" ? "wss:" : "ws:";
+    // trim trailing slash
+    return u.toString().replace(/\/$/, "");
+  }
+
+  // last-resort dev fallback
+  return "ws://localhost:2567";
+}
+
 export default class MatchScene extends Phaser.Scene {
   private client!: Client;
   private uiRoot?: Phaser.GameObjects.DOMElement;
@@ -16,14 +32,13 @@ export default class MatchScene extends Phaser.Scene {
   }
 
   create() {
-    // must be signed in
-    if (!auth.user || !auth.token) {
+    if (!auth.user) {
       this.scene.start("menu");
       return;
     }
 
-    this.client = new Client(import.meta.env.VITE_WS_URL);
-    this.client.auth.token = auth.token;
+    // colyseus auth will happen via cookie during websocket upgrade
+    this.client = new Client(getWsUrl());
 
     this.uiRoot = this.add
       .dom(this.cameras.main.centerX, this.cameras.main.centerY)
@@ -35,17 +50,12 @@ export default class MatchScene extends Phaser.Scene {
     const el = this.uiRoot.node as HTMLDivElement;
 
     const signedInAs = el.querySelector<HTMLDivElement>("#signedInAs")!;
-
-    const displayName =
-      auth.user.displayName ??
-      auth.user.email ??
-      "Unknown";
-
-    signedInAs.innerText = `Signed in as: ${displayName}`;
-
     const roomIdInput = el.querySelector<HTMLInputElement>("#roomId")!;
     const status = el.querySelector<HTMLDivElement>("#status")!;
     const logoutBtn = el.querySelector<HTMLButtonElement>("#logout")!;
+
+    const displayName = auth.user.displayName ?? auth.user.email ?? "Unknown";
+    signedInAs.innerText = `Signed in as: ${displayName}`;
 
     const goLobby = (room: Room) => {
       this.uiRoot?.destroy();
@@ -65,10 +75,7 @@ export default class MatchScene extends Phaser.Scene {
     el.querySelector<HTMLButtonElement>("#host")!.onclick = async () => {
       status.innerText = "Hosting...";
       try {
-        const room = await this.client.create("arena", {
-          // name comes from server auth displayName
-        });
-
+        const room = await this.client.create("arena", {});
         status.innerText = `Hosted! Room ID: ${room.roomId}`;
         goLobby(room);
       } catch (err) {
@@ -85,10 +92,7 @@ export default class MatchScene extends Phaser.Scene {
 
       status.innerText = "Joining...";
       try {
-        const room = await this.client.joinById(roomId, {
-          // name comes from server auth displayName
-        });
-
+        const room = await this.client.joinById(roomId, {});
         goLobby(room);
       } catch (err) {
         status.innerText = `Join failed: ${String(err)}`;

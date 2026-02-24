@@ -58,8 +58,21 @@ export async function resendVerification(email: string) {
 }
 
 export async function me() {
-  const r = await fetch(url("/auth/me"), { credentials: "include" });
-  if (!r.ok) return null;
+  const r = await fetch(url("/auth/me"), {
+    credentials: "include",
+  });
+
+  // 401 = not logged in (normal case)
+  if (r.status === 401) {
+    return null;
+  }
+
+  // Other errors should NOT silently pass
+  if (!r.ok) {
+    const data = await r.json().catch(() => ({}));
+    throw new Error((data as any).error ?? "ME_FAILED");
+  }
+
   const data = await r.json();
   return data.user;
 }
@@ -78,7 +91,7 @@ export async function requestPasswordReset(email: string) {
 
   const data = await r.json().catch(() => ({}));
 
-  // NOTE: server should usually return { ok: true } even if email not found
+  // server should usually return { ok: true } even if email not found
   if (!r.ok) throw new Error((data as any).error ?? "RESET_REQUEST_FAILED");
   return data as { ok: true };
 }

@@ -2,6 +2,20 @@ import Phaser from "phaser";
 import { Client } from "colyseus.js";
 import { auth } from "../auth";
 
+function getWsUrl(): string {
+  const ws = import.meta.env.VITE_WS_URL as string | undefined;
+  if (ws && ws.trim()) return ws;
+
+  const api = import.meta.env.VITE_API_URL as string | undefined;
+  if (api && api.trim()) {
+    const u = new URL(api);
+    u.protocol = u.protocol === "https:" ? "wss:" : "ws:";
+    return u.toString().replace(/\/$/, "");
+  }
+
+  return "ws://localhost:2567";
+}
+
 export default class MenuScene extends Phaser.Scene {
   private client!: Client;
   private uiRoot?: Phaser.GameObjects.DOMElement;
@@ -15,11 +29,7 @@ export default class MenuScene extends Phaser.Scene {
   }
 
   async create() {
-    this.client = new Client(import.meta.env.VITE_WS_URL);
-
-    if (auth.token) {
-      this.client.auth.token = auth.token;
-    }
+    this.client = new Client(getWsUrl());
 
     this.uiRoot = this.add
       .dom(this.cameras.main.centerX, this.cameras.main.centerY)
@@ -54,8 +64,8 @@ export default class MenuScene extends Phaser.Scene {
     const authError = el.querySelector<HTMLDivElement>("#authError")!;
 
     const emailInput = el.querySelector<HTMLInputElement>("#email")!;
-    
     const passwordInput = el.querySelector<HTMLInputElement>("#password")!;
+
     const confirmPasswordRow = el.querySelector<HTMLDivElement>("#confirmPasswordRow");
     const confirmPasswordInput = el.querySelector<HTMLInputElement>("#confirmPassword");
     if (confirmPasswordRow) confirmPasswordRow.style.display = "none";
@@ -94,7 +104,6 @@ export default class MenuScene extends Phaser.Scene {
 
     const goNextIfAuthed = () => {
       if (auth.user && auth.user.emailVerified) {
-        if (auth.token) this.client.auth.token = auth.token;
         this.uiRoot?.destroy();
         this.scene.start("match");
       }
@@ -106,7 +115,7 @@ export default class MenuScene extends Phaser.Scene {
     };
 
     const renderAuth = () => {
-      // 1) VERIFY MODE (highest priority)
+      // verify mode
       if (auth.pendingVerifyEmail) {
         forceLoginMode();
         authBox.style.display = "none";
@@ -117,8 +126,7 @@ export default class MenuScene extends Phaser.Scene {
         return;
       }
 
-      // 2) RESET MODE (next priority)
-      // RESET MODE (next priority)
+      // reset mode
       if (auth.pendingResetEmail !== null) {
         forceLoginMode();
         authBox.style.display = "none";
@@ -130,7 +138,7 @@ export default class MenuScene extends Phaser.Scene {
         return;
       }
 
-      // 3) LOGGED OUT MODE
+      // logged out mode
       if (!auth.user) {
         authBox.style.display = "block";
         verifyOnlyBox.style.display = "none";
@@ -141,14 +149,14 @@ export default class MenuScene extends Phaser.Scene {
         loginBtn.style.display = "inline-block";
         signupModeBtn.style.display = "inline-block";
         displayNameRow.style.display = signupMode ? "block" : "none";
-        confirmPasswordRow && (confirmPasswordRow.style.display = signupMode ? "block" : "none");
+        if (confirmPasswordRow) confirmPasswordRow.style.display = signupMode ? "block" : "none";
 
         verifyStatus.innerText = "";
         verifyCodeInput.value = "";
         return;
       }
 
-      // 4) LOGGED IN
+      // logged in + verified
       if (auth.user.emailVerified) {
         authBox.style.display = "none";
         verifyOnlyBox.style.display = "none";
@@ -156,7 +164,7 @@ export default class MenuScene extends Phaser.Scene {
         return;
       }
 
-      // 5) SAFETY: logged in but unverified -> force verify
+      // logged in but unverified -> force verify
       forceLoginMode();
       auth.pendingVerifyEmail = auth.user.email;
       localStorage.setItem("pc.pendingEmail", auth.pendingVerifyEmail);
@@ -166,8 +174,14 @@ export default class MenuScene extends Phaser.Scene {
       verifyStatus.innerText = `Code sent to ${auth.pendingVerifyEmail}`;
     };
 
+    // ---- SESSION RESTORE (IMPORTANT) ----
+    status.innerText = "Checking session...";
+    await auth.restore(); // reads cookie session via /auth/me
+    status.innerText = "";
+
     passwordInput.value = "";
-    confirmPasswordInput && (confirmPasswordInput.value = "");
+    if (confirmPasswordInput) confirmPasswordInput.value = "";
+
     renderAuth();
     goNextIfAuthed();
 
@@ -175,14 +189,16 @@ export default class MenuScene extends Phaser.Scene {
       signupMode = !signupMode;
       signupModeBtn.innerText = signupMode ? "Back to Login" : "Signup";
       setAuthError(null);
-      confirmPasswordInput && (confirmPasswordInput.value = "");
+      if (confirmPasswordInput) confirmPasswordInput.value = "";
       renderAuth();
     };
 
     loginBtn.onclick = async () => {
       setAuthError(null);
+      status.innerText = "";
+
       try {
-        const email = emailInput.value.trim();
+        const email = emailInput.value.trim().toLowerCase();
         const password = passwordInput.value;
 
         if (signupMode) {
@@ -194,22 +210,20 @@ export default class MenuScene extends Phaser.Scene {
             return;
           }
 
+          status.innerText = "Creating account...";
           await auth.signup(email, password, displayName);
         } else {
+          status.innerText = "Signing in...";
           await auth.login(email, password);
         }
 
-        if (auth.token) this.client.auth.token = auth.token;
-
-        // only clear password if we actually entered the game
+        status.innerText = "";
         renderAuth();
         goNextIfAuthed();
 
-        // clear password only if authed+verified
-        if (auth.user?.emailVerified) {
-          passwordInput.value = "";
-        }
+        if (auth.user?.emailVerified) passwordInput.value = "";
       } catch (e: any) {
+        status.innerText = "";
         setAuthError(e?.message ?? "AUTH_FAILED");
         renderAuth();
       }
@@ -226,9 +240,11 @@ export default class MenuScene extends Phaser.Scene {
           return;
         }
 
+        verifyStatus.innerText = "Verifying...";
         await auth.verifyEmail(code);
 
         verifyCodeInput.value = "";
+        verifyStatus.innerText = "";
         renderAuth();
         goNextIfAuthed();
       } catch (e: any) {
@@ -237,36 +253,35 @@ export default class MenuScene extends Phaser.Scene {
     };
 
     resendBtn.onclick = async () => {
-      await auth.resendVerification();
-      verifyStatus.innerText = "Code resent.";
+      try {
+        await auth.resendVerification();
+        verifyStatus.innerText = "Code resent.";
+      } catch (e: any) {
+        verifyStatus.innerText = e?.message ?? "RESEND_FAILED";
+      }
     };
 
     backToAuthBtn.onclick = () => {
-      // Always return to LOGIN screen (never signup)
       forceLoginMode();
 
-      // Clear verify flow
       auth.pendingVerifyEmail = null;
       localStorage.removeItem("pc.pendingEmail");
 
-      // Clear verify UI
       verifyCodeInput.value = "";
       verifyStatus.innerText = "";
-
-      // Optional: clear any auth error too
       setAuthError(null);
 
-      // Show login UI
       renderAuth();
-
-      // Optional: focus password for quick retry
       passwordInput.focus();
     };
 
     logoutBtn.onclick = async () => {
       setAuthError(null);
+      status.innerText = "Logging out...";
       await auth.logout();
-      confirmPasswordInput && (confirmPasswordInput.value = "");
+      status.innerText = "";
+
+      if (confirmPasswordInput) confirmPasswordInput.value = "";
       passwordInput.value = "";
       renderAuth();
       status.innerText = "Logged out.";
@@ -275,14 +290,11 @@ export default class MenuScene extends Phaser.Scene {
     forgotBtn.onclick = () => {
       const e = emailInput.value.trim().toLowerCase();
 
-      // Enter reset mode even if e is ""
       auth.pendingResetEmail = e;
       localStorage.setItem("pc.pendingResetEmail", e);
 
-      // seed reset screen
       resetEmailInput.value = e;
       resetStatus.innerText = "";
-
       renderAuth();
     };
 
@@ -292,6 +304,7 @@ export default class MenuScene extends Phaser.Scene {
 
       try {
         const e = resetEmailInput.value.trim().toLowerCase();
+        resetStatus.innerText = "Sending code...";
         await auth.requestPasswordReset(e);
         resetStatus.innerText = `Code sent to ${e}`;
       } catch (err: any) {
@@ -317,15 +330,20 @@ export default class MenuScene extends Phaser.Scene {
       }
 
       try {
+        resetStatus.innerText = "Resetting password...";
         await auth.resetPassword(code, pw);
 
-        // return to login
         resetCodeInput.value = "";
         resetNewPwInput.value = "";
         resetConfirmPwInput.value = "";
         passwordInput.value = "";
 
         resetStatus.innerText = "Password reset. Please log in.";
+
+        // exit reset mode
+        auth.pendingResetEmail = null;
+        localStorage.removeItem("pc.pendingResetEmail");
+
         renderAuth();
       } catch (err: any) {
         resetStatus.innerText = err?.message ?? "RESET_FAILED";
