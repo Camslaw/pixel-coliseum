@@ -277,7 +277,7 @@ export default class ArenaScene extends Phaser.Scene {
     };
 
     this.room.onLeave(() => {
-      this.scene.start("match");
+      this.scene.start("hub");
     });
 
     const onKeyDown = (ev: KeyboardEvent) => {

@@ -19,21 +19,21 @@ function getWsUrl(): string {
   return "ws://localhost:2567";
 }
 
-export default class MatchScene extends Phaser.Scene {
+export default class HubScene extends Phaser.Scene {
   private client!: Client;
   private uiRoot?: Phaser.GameObjects.DOMElement;
 
   constructor() {
-    super("match");
+    super("hub");
   }
 
   preload() {
-    this.load.html("match-ui", "/ui/match.html");
+    this.load.html("hub-ui", "/ui/hub.html");
   }
 
   create() {
     if (!auth.user) {
-      this.scene.start("menu");
+      this.scene.start("auth");
       return;
     }
 
@@ -42,7 +42,7 @@ export default class MatchScene extends Phaser.Scene {
 
     this.uiRoot = this.add
       .dom(this.cameras.main.centerX, this.cameras.main.centerY)
-      .createFromCache("match-ui");
+      .createFromCache("hub-ui");
 
     this.uiRoot.setOrigin(0.5, 0.5);
     this.uiRoot.setDepth(1000);
@@ -69,7 +69,7 @@ export default class MatchScene extends Phaser.Scene {
 
       this.uiRoot?.destroy();
       this.uiRoot = undefined;
-      this.scene.start("menu");
+      this.scene.start("auth");
     };
 
     el.querySelector<HTMLButtonElement>("#host")!.onclick = async () => {

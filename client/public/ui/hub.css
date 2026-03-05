@@ -1,0 +1,6 @@
+/* hub.css (hub-specific only) */
+.hub-root .actions {
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+}

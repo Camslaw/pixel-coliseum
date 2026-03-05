@@ -183,7 +183,7 @@ export default class LobbyScene extends Phaser.Scene {
     this.room.onLeave(() => {
       this.uiRoot?.destroy();
       this.uiRoot = undefined;
-      this.scene.start("match");
+      this.scene.start("hub");
     });
 
     renderLobbyUI();

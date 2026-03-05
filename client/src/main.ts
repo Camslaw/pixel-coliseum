@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import BootScene from "./scenes/BootScene";
-import MenuScene from "./scenes/MenuScene";
-import MatchScene from "./scenes/MatchScene";
+import AuthScene from "./scenes/AuthScene";
+import HubScene from "./scenes/HubScene";
 import LobbyScene from "./scenes/LobbyScene";
 import ArenaScene from "./scenes/ArenaScene";
 
@@ -16,7 +16,7 @@ const config: Phaser.Types.Core.GameConfig = {
     height: window.innerHeight,
   },
 
-  scene: [BootScene, MenuScene, MatchScene, LobbyScene, ArenaScene],
+  scene: [BootScene, AuthScene, HubScene, LobbyScene, ArenaScene],
   dom: { createContainer: true },
   pixelArt: true,
   roundPixels: true,

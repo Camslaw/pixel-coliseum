@@ -1,0 +1,44 @@
+.ui-card,
+.ui-card * {
+	box-sizing: border-box;
+}
+
+.ui-card {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;          /* identical spacing */
+	width: 560px;       /* identical sizing */
+	padding: 18px;
+	background: linear-gradient(180deg, #0c0e16, #080a10);
+	border: 4px solid #ffc850;
+	border-radius: 16px;
+	color: white;
+	font-family: ui-monospace, monospace;
+	position: relative;
+}
+
+.ui-card .logo {
+	display: block;
+	margin: 0 auto 10px;
+	width: 360px;       /* identical logo sizing */
+	image-rendering: pixelated;
+}
+
+.ui-card button {
+	cursor: pointer;
+}
+
+.ui-card .field {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	flex-wrap: wrap;
+}
+
+.ui-card .field input {
+	flex: 1 1 auto;
+	min-width: 160px;
+	padding: 6px 8px;
+	border-radius: 6px;
+	border: 1px solid #333;
+}

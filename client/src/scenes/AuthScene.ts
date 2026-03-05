@@ -16,12 +16,12 @@ function getWsUrl(): string {
   return "ws://localhost:2567";
 }
 
-export default class MenuScene extends Phaser.Scene {
+export default class AuthScene extends Phaser.Scene {
   private client!: Client;
   private uiRoot?: Phaser.GameObjects.DOMElement;
 
   constructor() {
-    super("menu");
+    super("auth");
   }
 
   preload() {
@@ -105,7 +105,7 @@ export default class MenuScene extends Phaser.Scene {
     const goNextIfAuthed = () => {
       if (auth.user && auth.user.emailVerified) {
         this.uiRoot?.destroy();
-        this.scene.start("match");
+        this.scene.start("hub");
       }
     };
 
