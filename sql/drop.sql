@@ -43,6 +43,23 @@ BEGIN
     END LOOP;
 END $$;
 
+-- drop all enums
+DO $$
+DECLARE
+    r RECORD;
+BEGIN
+    FOR r IN (
+        SELECT t.typname
+        FROM pg_type t
+        JOIN pg_namespace n ON n.oid = t.typnamespace
+        WHERE n.nspname = 'public'
+          AND t.typtype = 'e'
+    )
+    LOOP
+        EXECUTE format('DROP TYPE IF EXISTS public.%I CASCADE', r.typname);
+    END LOOP;
+END $$;
+
 -- drop all sequences
 DO $$
 DECLARE
