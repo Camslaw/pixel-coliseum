@@ -2,6 +2,7 @@ import { Room, Client, ServerError } from "@colyseus/core";
 import { ArenaState, Player } from "../state/ArenaState";
 import { pool } from "../db/pool";
 import { sessionMiddleware } from "../session";
+import { loadBlockedFromTiledJson, type BlockedGrid } from "../map/blocking"; // <- adjust path
 
 type JoinOptions = { class?: string };
 
@@ -47,43 +48,55 @@ function hydrateSession(req: any): Promise<void> {
 }
 
 export class ArenaRoom extends Room<ArenaState> {
-  onCreate(_options: any) {
-    this.state = new ArenaState();
-    this.maxClients = 4;
+  private grid!: BlockedGrid;
 
-    this.onMessage("start_game", (client) => {
-      if (client.sessionId !== this.state.hostId) return;
-      if (this.state.phase !== "lobby") return;
-      this.state.phase = "playing";
-    });
+	onCreate(_options: any) {
+		this.state = new ArenaState();
+		this.maxClients = 4;
 
-    this.onMessage("set_class", (client, msg: any) => {
-      const cls = normalizeClass(msg?.class);
-      const p = this.state.players.get(client.sessionId);
-      if (!p) return;
-      p.class = cls;
-    });
+		this.grid = loadBlockedFromTiledJson({
+			jsonPath: "../client/public/assets/arena-map.json",
+			objectLayerName: "Object Layer 1",
+		});
 
-    this.onMessage("move", (client, msg: any) => {
-      console.log("[ArenaRoom] move from", client.sessionId, msg);
+		this.onMessage("start_game", (client) => {
+			if (client.sessionId !== this.state.hostId) return;
+			if (this.state.phase !== "lobby") return;
+			this.state.phase = "playing";
+		});
 
-      const p = this.state.players.get(client.sessionId);
-      if (!p) {
-        console.log("[ArenaRoom] move: no player for", client.sessionId);
-        return;
-      }
+		this.onMessage("set_class", (client, msg: any) => {
+			const cls = normalizeClass(msg?.class);
+			const p = this.state.players.get(client.sessionId);
+			if (!p) return;
+			p.class = cls;
+		});
 
-      const dx = Math.sign(msg?.dx ?? 0);
-      const dy = Math.sign(msg?.dy ?? 0);
+		this.onMessage("move", (client, msg: any) => {
+			const p = this.state.players.get(client.sessionId);
+			if (!p) return;
 
-      const old = { tx: p.tx, ty: p.ty };
+			const dx = Math.sign(msg?.dx ?? 0);
+			const dy = Math.sign(msg?.dy ?? 0);
 
-      p.tx = Math.max(0, Math.min(p.tx + dx, MAP_W_TILES - 1));
-      p.ty = Math.max(0, Math.min(p.ty + dy, MAP_H_TILES - 1));
+			if (dx !== 0 && dy !== 0) return;
 
-      console.log("[ArenaRoom] moved", client.sessionId, old, "->", { tx: p.tx, ty: p.ty });
-    });
-  }
+			const ntx = p.tx + dx;
+			const nty = p.ty + dy;
+
+			if (this.grid.isBlocked(ntx, nty)) return;
+
+			for (const other of this.state.players.values()) {
+				if (other.id !== p.id && other.tx === ntx && other.ty === nty) {
+					return;
+				}
+			}
+
+			const old = { tx: p.tx, ty: p.ty };
+			p.tx = ntx;
+			p.ty = nty;
+		});
+	}
 
   async onAuth(client: Client, _options: JoinOptions, reqFromOnAuth: any) {
     await hydrateSession(reqFromOnAuth);
@@ -133,6 +146,31 @@ export class ArenaRoom extends Room<ArenaState> {
     (p as any).spawnIndex = spawnIndex;
     p.tx = spawn.tx;
     p.ty = spawn.ty;
+
+    // if spawn is blocked, find the nearest unblocked tile
+    let { tx, ty } = spawn;
+
+    if (this.grid.isBlocked(tx, ty)) {
+      // small spiral search
+      const maxR = 6;
+      let found = false;
+      for (let r = 1; r <= maxR && !found; r++) {
+        for (let dy = -r; dy <= r && !found; dy++) {
+          for (let dx = -r; dx <= r && !found; dx++) {
+            const nx = tx + dx;
+            const ny = ty + dy;
+            if (!this.grid.isBlocked(nx, ny)) {
+              tx = nx;
+              ty = ny;
+              found = true;
+            }
+          }
+        }
+      }
+    }
+
+    p.tx = tx;
+    p.ty = ty;
 
     this.state.players.set(client.sessionId, p);
     if (!this.state.hostId) this.state.hostId = client.sessionId;

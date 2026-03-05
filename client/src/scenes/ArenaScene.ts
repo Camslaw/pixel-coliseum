@@ -74,6 +74,31 @@ export default class ArenaScene extends Phaser.Scene {
     }
   }
 
+  private blocked = new Set<string>(); // key = "x,y"
+
+  private key(tx: number, ty: number) {
+    return `${tx},${ty}`;
+  }
+
+  private buildBlockedGrid(map: Phaser.Tilemaps.Tilemap, objLayerName = "Object Layer 1") {
+    this.blocked.clear();
+
+    const objLayer = map.getObjectLayer(objLayerName);
+    if (objLayer) {
+      for (const obj of objLayer.objects) {
+        const tx = Math.floor((obj.x ?? 0) / map.tileWidth);
+        const ty = Math.floor((obj.y ?? 0) / map.tileHeight) - 1;
+        this.blocked.add(this.key(tx, ty));
+      }
+    }
+  }
+
+  private isBlocked(tx: number, ty: number) {
+    if (tx < 0 || ty < 0) return true;
+    if (tx >= 30 || ty >= 20) return true;
+    return this.blocked.has(this.key(tx, ty));
+  }
+
   create() {
     console.log("[Arena] create() running");
     console.log("[Arena] create()", {
@@ -90,6 +115,7 @@ export default class ArenaScene extends Phaser.Scene {
       console.log("[Arena] DESTROY");
     });
     const map = this.make.tilemap({ key: "arena-map" });
+    this.buildBlockedGrid(map);
     const tileset = map.addTilesetImage("arena-tileset", "tiles");
     if (!tileset) throw new Error("Tileset mapping failed.");
 
@@ -120,11 +146,14 @@ export default class ArenaScene extends Phaser.Scene {
 
       sprite.setPosition(x, y);
 
+      sprite.setDepth(y);
+
       const label = (sprite as any).__label as Phaser.GameObjects.Text | undefined;
       if (label) {
-        const NAME_Y_OFFSET = 1.35 * TILE;
+        const NAME_Y_OFFSET = Math.round(1.35 * TILE);
         label.setPosition(x, y - NAME_Y_OFFSET);
         label.setText(p.name ?? "Player");
+        label.setDepth(y + 1);
       }
     };
 
@@ -138,11 +167,17 @@ export default class ArenaScene extends Phaser.Scene {
 
     for (const obj of objLayer.objects) {
       if (!("gid" in obj) || !obj.gid) continue;
+
       const frame = obj.gid - tileset.firstgid;
+
       const x = (obj.x ?? 0) + (obj.width ?? 0) / 2 + offsetX;
-      const y = (obj.y ?? 0) - (obj.height ?? 0) / 2 + offsetY;
-      const sprite = this.add.image(x, y, "tiles", frame);
-      if (obj.rotation) sprite.setRotation(Phaser.Math.DegToRad(obj.rotation));
+      const y = (obj.y ?? 0) + offsetY;
+
+      const prop = this.add.image(x, y, "tiles", frame)
+        .setOrigin(0.5, 1);           
+      prop.setDepth(Math.round(y));   
+
+      if (obj.rotation) prop.setRotation(Phaser.Math.DegToRad(obj.rotation));
     }
 
     const leaveText = this.add
@@ -194,7 +229,7 @@ export default class ArenaScene extends Phaser.Scene {
 
       const sprite = this.add.sprite(pos.x, pos.y, "player", 0)
         .setOrigin(0.5, 1)
-        .setDepth(PLAYER_DEPTH);
+        .setDepth(Math.round(pos.y));
 
       // crosshair for debugging
       // const cross = this.add.graphics().setDepth(9999);
@@ -297,6 +332,18 @@ export default class ArenaScene extends Phaser.Scene {
       }
 
       console.log("[Arena] sending move", { dx, dy });
+
+      const me = (players as any).get(this.room.sessionId);
+      if (!me) return;
+
+      const ntx = me.tx + dx;
+      const nty = me.ty + dy;
+
+      if (this.isBlocked(ntx, nty)) {
+        console.log("blocked", ntx, nty); // debugging
+        return;
+      }
+
       this.room.send("move", { dx, dy });
     };
 
