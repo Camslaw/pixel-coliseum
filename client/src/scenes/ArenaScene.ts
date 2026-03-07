@@ -33,7 +33,10 @@ export default class ArenaScene extends Phaser.Scene {
 				for (let tx = 0; tx < map.width; tx++) {
 					const tile = terrainLayer.getTileAt(tx, ty);
 					if (tile && tile.index !== -1) {
-						this.blocked.add(this.key(tx, ty));
+						const blockedTy = ty + 1;
+						if (blockedTy < map.height) {
+							this.blocked.add(this.key(tx, blockedTy));
+						}
 					}
 				}
 			}
@@ -46,7 +49,7 @@ export default class ArenaScene extends Phaser.Scene {
 				if (!("gid" in obj) || !obj.gid) continue;
 
 				const tx = Math.floor((obj.x ?? 0) / map.tileWidth);
-				const ty = Math.floor((obj.y ?? 0) / map.tileHeight) - 1;
+				const ty = Math.floor((obj.y ?? 0) / map.tileHeight);
 				this.blocked.add(this.key(tx, ty));
 			}
 		}
@@ -65,9 +68,17 @@ export default class ArenaScene extends Phaser.Scene {
 
 		this.buildBlockedGrid(map);
 
+		const tex = this.textures.get("player-sword-class");
+		console.log("frameTotal:", tex.frameTotal);
+		console.log("frames:", Object.keys(tex.frames).slice(0, 20));
+
 		const offsetX = Math.round((this.cameras.main.width - map.widthInPixels) / 2);
 		const offsetY = Math.round((this.cameras.main.height - map.heightInPixels) / 2);
 		const TILE = map.tileWidth;
+
+		const PLAYER_SCALE = 1.5;
+		const PLAYER_FEET_OFFSET = 8;
+		const NAME_Y_OFFSET = Math.round(2.25 * TILE);
 
 		const tileToWorldFeet = (tx: number, ty: number) => ({
 			x: Math.round(offsetX + (tx + 0.5) * TILE),
@@ -165,15 +176,18 @@ export default class ArenaScene extends Phaser.Scene {
 			if (this.playerSprites.has(sessionId)) return;
 
 			const pos = tileToWorldFeet(player.tx, player.ty);
+			const spriteY = pos.y - PLAYER_FEET_OFFSET;
 
-			const sprite = this.add.sprite(pos.x, pos.y, "player", 0).setOrigin(0.5, 1);
+			const sprite = this.add
+				.sprite(pos.x, spriteY, "player-sword-class", 1)
+				.setOrigin(0.5, 1)
+				.setScale(PLAYER_SCALE);
 
 			// Critical: player depth is based on feet Y
 			sprite.setDepth(pos.y);
 
-			const NAME_Y_OFFSET = Math.round(1.35 * TILE);
 			const label = this.add
-				.text(pos.x, pos.y - NAME_Y_OFFSET, player.name ?? "Player", {
+				.text(pos.x, spriteY - NAME_Y_OFFSET, player.name ?? "Player", {
 					fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
 					fontSize: "12px",
 					color: "#ffffff",
@@ -191,14 +205,14 @@ export default class ArenaScene extends Phaser.Scene {
 			if (!p || !sprite) return;
 
 			const pos = tileToWorldFeet(p.tx, p.ty);
+			const spriteY = pos.y - PLAYER_FEET_OFFSET;
 
-			sprite.setPosition(pos.x, pos.y);
+			sprite.setPosition(pos.x, spriteY);
 			sprite.setDepth(pos.y);
 
 			const label = (sprite as any).__label as Phaser.GameObjects.Text | undefined;
 			if (label) {
-				const NAME_Y_OFFSET = Math.round(1.35 * TILE);
-				label.setPosition(pos.x, pos.y - NAME_Y_OFFSET);
+				label.setPosition(pos.x, spriteY - NAME_Y_OFFSET);
 				label.setText(p.name ?? "Player");
 				label.setDepth(pos.y + 1);
 			}

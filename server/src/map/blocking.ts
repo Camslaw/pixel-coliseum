@@ -51,7 +51,11 @@ export function loadBlockedFromTiledJson(opts: {
 
 			const tx = i % map.width;
 			const ty = Math.floor(i / map.width);
-			blocked.add(key(tx, ty));
+			const blockedTy = ty + 1;
+
+			if (blockedTy < map.height) {
+				blocked.add(key(tx, blockedTy));
+			}
 		}
 	}
 
@@ -65,7 +69,7 @@ export function loadBlockedFromTiledJson(opts: {
 			if (!obj.gid) continue;
 
 			const tx = Math.floor((obj.x ?? 0) / map.tilewidth);
-			const ty = Math.floor((obj.y ?? 0) / map.tileheight) - 1;
+			const ty = Math.floor((obj.y ?? 0) / map.tileheight);
 			blocked.add(key(tx, ty));
 		}
 	}
