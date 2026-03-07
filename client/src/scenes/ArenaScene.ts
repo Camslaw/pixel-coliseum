@@ -1,367 +1,310 @@
 import Phaser from "phaser";
 import type { Room } from "colyseus.js";
 
-type PlayerClass = "sword" | "bow" | "magic";
-
 type ArenaSceneData = {
-  room: Room;
+	room: Room;
 };
 
 export default class ArenaScene extends Phaser.Scene {
-  private room!: Room;
-  private playerSprites = new Map<string, Phaser.GameObjects.Sprite>();
-
-  private playerListHud?: Phaser.GameObjects.Text;
-
-  constructor() {
-    super("arena");
-  }
-
-  init(data: ArenaSceneData) {
-    this.room = data.room;
-  }
-
-  private drawDebugGrid(map: Phaser.Tilemaps.Tilemap, offsetX: number, offsetY: number) {
-    const g = this.add.graphics();
-    g.setDepth(9998); // under HUD (9999), over map/objects
-
-    const tileW = map.tileWidth;
-    const tileH = map.tileHeight;
-
-    const w = map.widthInPixels;
-    const h = map.heightInPixels;
-
-    const startX = Math.round(offsetX);
-    const startY = Math.round(offsetY);
-
-    // subtle lines
-    g.lineStyle(1, 0x00ff00, 0.25);
-
-    // vertical lines
-    for (let x = 0; x <= w; x += tileW) {
-      g.beginPath();
-      g.moveTo(startX + x, startY);
-      g.lineTo(startX + x, startY + h);
-      g.strokePath();
-    }
-
-    // horizontal lines
-    for (let y = 0; y <= h; y += tileH) {
-      g.beginPath();
-      g.moveTo(startX, startY + y);
-      g.lineTo(startX + w, startY + y);
-      g.strokePath();
-    }
-
-    // outline the map
-    g.lineStyle(2, 0xffff00, 0.6);
-    g.strokeRect(startX, startY, w, h);
-
-    // show tile coordinates every N tiles
-    const labelEvery = 5;
-    for (let ty = 0; ty < map.height; ty += labelEvery) {
-      for (let tx = 0; tx < map.width; tx += labelEvery) {
-        this.add
-          .text(
-            startX + tx * tileW + 2,
-            startY + ty * tileH + 2,
-            `${tx},${ty}`,
-            { fontSize: "10px", color: "#00ff00" }
-          )
-          .setDepth(9998)
-          .setAlpha(0.8);
-      }
-    }
-  }
-
-  private blocked = new Set<string>(); // key = "x,y"
-
-  private key(tx: number, ty: number) {
-    return `${tx},${ty}`;
-  }
-
-  private buildBlockedGrid(map: Phaser.Tilemaps.Tilemap, objLayerName = "Object Layer 1") {
-    this.blocked.clear();
-
-    const objLayer = map.getObjectLayer(objLayerName);
-    if (objLayer) {
-      for (const obj of objLayer.objects) {
-        const tx = Math.floor((obj.x ?? 0) / map.tileWidth);
-        const ty = Math.floor((obj.y ?? 0) / map.tileHeight) - 1;
-        this.blocked.add(this.key(tx, ty));
-      }
-    }
-  }
-
-  private isBlocked(tx: number, ty: number) {
-    if (tx < 0 || ty < 0) return true;
-    if (tx >= 30 || ty >= 20) return true;
-    return this.blocked.has(this.key(tx, ty));
-  }
-
-  create() {
-    console.log("[Arena] create() running");
-    console.log("[Arena] create()", {
-      time: Date.now(),
-      sceneActive: this.scene.isActive("arena"),
-      sceneVisible: this.scene.isVisible("arena"),
-    });
-
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      console.log("[Arena] SHUTDOWN");
-    });
-
-    this.events.once(Phaser.Scenes.Events.DESTROY, () => {
-      console.log("[Arena] DESTROY");
-    });
-    const map = this.make.tilemap({ key: "arena-map" });
-    this.buildBlockedGrid(map);
-    const tileset = map.addTilesetImage("arena-tileset", "tiles");
-    if (!tileset) throw new Error("Tileset mapping failed.");
-
-    const offsetX = Math.round((this.cameras.main.width - map.widthInPixels) / 2);
-    const offsetY = Math.round((this.cameras.main.height - map.heightInPixels) / 2);
-
-    const TILE = map.tileWidth;
-
-    const tileToWorldFeet = (tx: number, ty: number) => ({
-      x: offsetX + (tx + 0.5) * TILE,
-      y: offsetY + (ty + 1) * TILE,
-    });
-
-    const players = (this.room.state as any).players;
-    if (!players) {
-      console.warn("Room state has no players map yet.");
-      return;
-    }
-
-    const updateSpriteFromState = (sid: string) => {
-      const p = players.get(sid);
-      const sprite = this.playerSprites.get(sid);
-      if (!p || !sprite) return;
-
-      const pos = tileToWorldFeet(p.tx, p.ty);
-      const x = Math.round(pos.x);
-      const y = Math.round(pos.y);
-
-      sprite.setPosition(x, y);
-
-      sprite.setDepth(y);
-
-      const label = (sprite as any).__label as Phaser.GameObjects.Text | undefined;
-      if (label) {
-        const NAME_Y_OFFSET = Math.round(1.35 * TILE);
-        label.setPosition(x, y - NAME_Y_OFFSET);
-        label.setText(p.name ?? "Player");
-        label.setDepth(y + 1);
-      }
-    };
-
-    // this.drawDebugGrid(map, offsetX, offsetY);
-
-    map.createLayer("Tile Layer 1", tileset, offsetX, offsetY);
-    map.createLayer("additional layer", tileset, offsetX, offsetY);
-
-    const objLayer = map.getObjectLayer("Object Layer 1");
-    if (!objLayer) throw new Error("Missing object layer: Object Layer 1");
-
-    for (const obj of objLayer.objects) {
-      if (!("gid" in obj) || !obj.gid) continue;
-
-      const frame = obj.gid - tileset.firstgid;
-
-      const x = (obj.x ?? 0) + (obj.width ?? 0) / 2 + offsetX;
-      const y = (obj.y ?? 0) + offsetY;
-
-      const prop = this.add.image(x, y, "tiles", frame)
-        .setOrigin(0.5, 1);           
-      prop.setDepth(Math.round(y));   
-
-      if (obj.rotation) prop.setRotation(Phaser.Math.DegToRad(obj.rotation));
-    }
-
-    const leaveText = this.add
-      .text(16, 36, "Leave Game", { fontFamily: "ui-monospace, monospace", fontSize: "16px" })
-      .setScrollFactor(0)
-      .setDepth(9999)
-      .setInteractive({ useHandCursor: true });
-
-    leaveText.on("pointerdown", () => {
-      this.room.leave();
-    });
-
-    const hud = this.add.text(
-      0,
-      64,
-      `Room: ${this.room.roomId}\n`,
-      {
-        fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
-        fontSize: "14px",
-        color: "#ffffff",
-        backgroundColor: "rgba(0,0,0,0.5)",
-        padding: { left: 8, right: 8, top: 6, bottom: 6 },
-      }
-    );
-    hud.setScrollFactor(0);
-    hud.setDepth(9999);
-
-    this.playerListHud = this.add.text(
-      0,
-      hud.y + hud.height + 8,
-      "",
-      {
-        fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
-        fontSize: "14px",
-        color: "#ffffff",
-        backgroundColor: "rgba(0,0,0,0.5)",
-        padding: { left: 8, right: 8, top: 6, bottom: 6 },
-      }
-    );
-    this.playerListHud.setScrollFactor(0);
-    this.playerListHud.setDepth(9999);
-
-    const PLAYER_DEPTH = 50;
-
-    const spawnPlayerSprite = (player: any, sessionId: string) => {
-      if (this.playerSprites.has(sessionId)) return;
-
-      const pos = tileToWorldFeet(player.tx, player.ty);
-
-      const sprite = this.add.sprite(pos.x, pos.y, "player", 0)
-        .setOrigin(0.5, 1)
-        .setDepth(Math.round(pos.y));
-
-      // crosshair for debugging
-      // const cross = this.add.graphics().setDepth(9999);
-      // cross.lineStyle(1, 0xff00ff, 1);
-      // cross.strokeLineShape(new Phaser.Geom.Line(pos.x - 6, pos.y, pos.x + 6, pos.y));
-      // cross.strokeLineShape(new Phaser.Geom.Line(pos.x, pos.y - 6, pos.x, pos.y + 6));
-
-      const NAME_Y_OFFSET = 1.35 * TILE;
-
-      const label = this.add.text(
-        pos.x,
-        pos.y - NAME_Y_OFFSET,
-        player.name ?? "Player",
-        {
-          fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
-          fontSize: "12px",
-          color: "#ffffff",
-        }
-      )
-      .setOrigin(0.5, 0.5)
-      .setDepth(PLAYER_DEPTH + 1);
-
-      (sprite as any).__label = label;
-
-      this.playerSprites.set(sessionId, sprite);
-    };
-
-    const renderPlayerList = () => {
-      const state = this.room.state as any;
-      const hostId = state.hostId as string | undefined;
-
-      const lines: string[] = [];
-      players.forEach((p: any, sid: string) => {
-        const me = sid === this.room.sessionId ? " (you)" : "";
-        const host = hostId && sid === hostId ? " [host]" : "";
-        const cls = (p.class as string) ?? "(no class)";
-        const name = (p.name as string) ?? "Player";
-        lines.push(`${name} - ${cls}${host}${me}`);
-      });
-
-      this.playerListHud?.setText(
-        ["Players:", ...(lines.length ? lines : ["-"])].join("\n")
-      );
-    };
-
-    players.forEach((p: any, sid: string) => spawnPlayerSprite(p, sid));
-    players.forEach((_p: any, sid: string) => updateSpriteFromState(sid));
-    renderPlayerList();
-
-    const onState = () => {
-      players.forEach((_p: any, sid: string) => {
-        if (!this.playerSprites.has(sid)) {
-          spawnPlayerSprite(players.get(sid), sid);
-        }
-        updateSpriteFromState(sid);
-      });
-      renderPlayerList();
-
-      const me = players.get(this.room.sessionId);
-      if (me) console.log("[Arena] patched me", me.tx, me.ty);
-    };
-
-    const unsubscribeState = this.room.onStateChange(onState);
-
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      try { (unsubscribeState as any)?.(); } catch {}
-    });
-
-    players.onRemove = (_player: any, sessionId: string) => {
-      console.log("[client] players.onRemove", sessionId, _player?.name, _player?.tx, _player?.ty);
-
-      const sprite = this.playerSprites.get(sessionId);
-      if (sprite) {
-        const label = (sprite as any).__label as Phaser.GameObjects.Text | undefined;
-        label?.destroy();
-        sprite.destroy();
-        this.playerSprites.delete(sessionId);
-      }
-      renderPlayerList();
-    };
-
-    this.room.onLeave(() => {
-      this.scene.start("hub");
-    });
-
-    const onKeyDown = (ev: KeyboardEvent) => {
-      console.log("[Arena] keydown:", ev.code);
-
-      let dx = 0, dy = 0;
-      switch (ev.code) {
-        case "KeyA":
-        case "ArrowLeft":  dx = -1; break;
-        case "KeyD":
-        case "ArrowRight": dx =  1; break;
-        case "KeyW":
-        case "ArrowUp":    dy = -1; break;
-        case "KeyS":
-        case "ArrowDown":  dy =  1; break;
-        default: return;
-      }
-
-      console.log("[Arena] sending move", { dx, dy });
-
-      const me = (players as any).get(this.room.sessionId);
-      if (!me) return;
-
-      const ntx = me.tx + dx;
-      const nty = me.ty + dy;
-
-      if (this.isBlocked(ntx, nty)) {
-        console.log("blocked", ntx, nty); // debugging
-        return;
-      }
-
-      this.room.send("move", { dx, dy });
-    };
-
-    console.log("[Arena] input enabled?", this.input?.enabled);
-    console.log("[Arena] keyboard plugin?", !!this.input?.keyboard);
-
-    // give the canvas focus on click so keydown works reliably
-    this.game.canvas?.setAttribute("tabindex", "0");
-    this.game.canvas?.addEventListener("pointerdown", () => {
-      this.game.canvas?.focus();
-      console.log("[Arena] canvas focused");
-    });
-
-    this.input.keyboard!.on("keydown", onKeyDown);
-
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      this.input.keyboard!.off("keydown", onKeyDown);
-    });
-
-  }
+	private room!: Room;
+	private playerSprites = new Map<string, Phaser.GameObjects.Sprite>();
+	private playerListHud?: Phaser.GameObjects.Text;
+	private blocked = new Set<string>();
+
+	constructor() {
+		super("arena");
+	}
+
+	init(data: ArenaSceneData) {
+		this.room = data.room;
+	}
+
+	private key(tx: number, ty: number) {
+		return `${tx},${ty}`;
+	}
+
+	private buildBlockedGrid(map: Phaser.Tilemaps.Tilemap) {
+		this.blocked.clear();
+
+		// Terrain tiles block if non-empty
+		const terrainLayer = map.getLayer("Terrain")?.tilemapLayer;
+		if (terrainLayer) {
+			for (let ty = 0; ty < map.height; ty++) {
+				for (let tx = 0; tx < map.width; tx++) {
+					const tile = terrainLayer.getTileAt(tx, ty);
+					if (tile && tile.index !== -1) {
+						this.blocked.add(this.key(tx, ty));
+					}
+				}
+			}
+		}
+
+		// Props block only on their base tile
+		const propsLayer = map.getObjectLayer("Props");
+		if (propsLayer) {
+			for (const obj of propsLayer.objects) {
+				if (!("gid" in obj) || !obj.gid) continue;
+
+				const tx = Math.floor((obj.x ?? 0) / map.tileWidth);
+				const ty = Math.floor((obj.y ?? 0) / map.tileHeight) - 1;
+				this.blocked.add(this.key(tx, ty));
+			}
+		}
+	}
+
+	private isBlocked(tx: number, ty: number, map: Phaser.Tilemaps.Tilemap) {
+		if (tx < 0 || ty < 0) return true;
+		if (tx >= map.width || ty >= map.height) return true;
+		return this.blocked.has(this.key(tx, ty));
+	}
+
+	create() {
+		const map = this.make.tilemap({ key: "arena-map" });
+		const tileset = map.addTilesetImage("arena-tileset", "tiles");
+		if (!tileset) throw new Error("Tileset mapping failed.");
+
+		this.buildBlockedGrid(map);
+
+		const offsetX = Math.round((this.cameras.main.width - map.widthInPixels) / 2);
+		const offsetY = Math.round((this.cameras.main.height - map.heightInPixels) / 2);
+		const TILE = map.tileWidth;
+
+		const tileToWorldFeet = (tx: number, ty: number) => ({
+			x: Math.round(offsetX + (tx + 0.5) * TILE),
+			y: Math.round(offsetY + (ty + 1) * TILE),
+		});
+
+		// ----------------------------
+		// Base tile layers
+		// ----------------------------
+		const groundLayer = map.createLayer("Ground", tileset, offsetX, offsetY);
+		const groundDetailsLayer = map.createLayer("GroundDetails", tileset, offsetX, offsetY);
+		const terrainLayer = map.createLayer("Terrain", tileset, offsetX, offsetY);
+
+		groundLayer?.setDepth(0);
+		groundDetailsLayer?.setDepth(1);
+		terrainLayer?.setDepth(2);
+
+		// ----------------------------
+		// Props: depth-sort by their base Y
+		// ----------------------------
+		const propsLayer = map.getObjectLayer("Props");
+		if (propsLayer) {
+			for (const obj of propsLayer.objects) {
+				if (!("gid" in obj) || !obj.gid) continue;
+
+				const frame = obj.gid - tileset.firstgid;
+
+				// In Tiled tile objects, x/y is bottom-left of the tile object.
+				const x = Math.round((obj.x ?? 0) + (obj.width ?? 0) / 2 + offsetX);
+				const y = Math.round((obj.y ?? 0) + offsetY);
+
+				const prop = this.add.image(x, y, "tiles", frame).setOrigin(0.5, 1);
+
+				// Critical: sort by base Y
+				prop.setDepth(y);
+
+				if (obj.rotation) {
+					prop.setRotation(Phaser.Math.DegToRad(obj.rotation));
+				}
+			}
+		}
+
+		// ----------------------------
+		// Overhangs: always above world actors
+		// ----------------------------
+		const overhangLayer = map.createLayer("Overhangs", tileset, offsetX, offsetY);
+		overhangLayer?.setDepth(5000);
+
+		// ----------------------------
+		// HUD
+		// ----------------------------
+		const leaveText = this.add
+			.text(16, 36, "Leave Game", {
+				fontFamily: "ui-monospace, monospace",
+				fontSize: "16px",
+			})
+			.setScrollFactor(0)
+			.setDepth(9999)
+			.setInteractive({ useHandCursor: true });
+
+		leaveText.on("pointerdown", () => {
+			this.room.leave();
+		});
+
+		const hud = this.add.text(0, 64, `Room: ${this.room.roomId}\n`, {
+			fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
+			fontSize: "14px",
+			color: "#ffffff",
+			backgroundColor: "rgba(0,0,0,0.5)",
+			padding: { left: 8, right: 8, top: 6, bottom: 6 },
+		});
+		hud.setScrollFactor(0);
+		hud.setDepth(9999);
+
+		this.playerListHud = this.add.text(0, hud.y + hud.height + 8, "", {
+			fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
+			fontSize: "14px",
+			color: "#ffffff",
+			backgroundColor: "rgba(0,0,0,0.5)",
+			padding: { left: 8, right: 8, top: 6, bottom: 6 },
+		});
+		this.playerListHud.setScrollFactor(0);
+		this.playerListHud.setDepth(9999);
+
+		// ----------------------------
+		// Players
+		// ----------------------------
+		const players = (this.room.state as any).players;
+		if (!players) {
+			console.warn("Room state has no players map yet.");
+			return;
+		}
+
+		const spawnPlayerSprite = (player: any, sessionId: string) => {
+			if (this.playerSprites.has(sessionId)) return;
+
+			const pos = tileToWorldFeet(player.tx, player.ty);
+
+			const sprite = this.add.sprite(pos.x, pos.y, "player", 0).setOrigin(0.5, 1);
+
+			// Critical: player depth is based on feet Y
+			sprite.setDepth(pos.y);
+
+			const NAME_Y_OFFSET = Math.round(1.35 * TILE);
+			const label = this.add
+				.text(pos.x, pos.y - NAME_Y_OFFSET, player.name ?? "Player", {
+					fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
+					fontSize: "12px",
+					color: "#ffffff",
+				})
+				.setOrigin(0.5, 0.5)
+				.setDepth(pos.y + 1);
+
+			(sprite as any).__label = label;
+			this.playerSprites.set(sessionId, sprite);
+		};
+
+		const updateSpriteFromState = (sid: string) => {
+			const p = players.get(sid);
+			const sprite = this.playerSprites.get(sid);
+			if (!p || !sprite) return;
+
+			const pos = tileToWorldFeet(p.tx, p.ty);
+
+			sprite.setPosition(pos.x, pos.y);
+			sprite.setDepth(pos.y);
+
+			const label = (sprite as any).__label as Phaser.GameObjects.Text | undefined;
+			if (label) {
+				const NAME_Y_OFFSET = Math.round(1.35 * TILE);
+				label.setPosition(pos.x, pos.y - NAME_Y_OFFSET);
+				label.setText(p.name ?? "Player");
+				label.setDepth(pos.y + 1);
+			}
+		};
+
+		const renderPlayerList = () => {
+			const state = this.room.state as any;
+			const hostId = state.hostId as string | undefined;
+
+			const lines: string[] = [];
+			players.forEach((p: any, sid: string) => {
+				const me = sid === this.room.sessionId ? " (you)" : "";
+				const host = hostId && sid === hostId ? " [host]" : "";
+				const cls = (p.class as string) ?? "(no class)";
+				const name = (p.name as string) ?? "Player";
+				lines.push(`${name} - ${cls}${host}${me}`);
+			});
+
+			this.playerListHud?.setText(["Players:", ...(lines.length ? lines : ["-"])].join("\n"));
+		};
+
+		players.forEach((p: any, sid: string) => spawnPlayerSprite(p, sid));
+		players.forEach((_p: any, sid: string) => updateSpriteFromState(sid));
+		renderPlayerList();
+
+		const onState = () => {
+			players.forEach((_p: any, sid: string) => {
+				if (!this.playerSprites.has(sid)) {
+					spawnPlayerSprite(players.get(sid), sid);
+				}
+				updateSpriteFromState(sid);
+			});
+			renderPlayerList();
+		};
+
+		const unsubscribeState = this.room.onStateChange(onState);
+
+		this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+			try {
+				(unsubscribeState as any)?.();
+			} catch {}
+		});
+
+		players.onRemove = (_player: any, sessionId: string) => {
+			const sprite = this.playerSprites.get(sessionId);
+			if (sprite) {
+				const label = (sprite as any).__label as Phaser.GameObjects.Text | undefined;
+				label?.destroy();
+				sprite.destroy();
+				this.playerSprites.delete(sessionId);
+			}
+			renderPlayerList();
+		};
+
+		this.room.onLeave(() => {
+			this.scene.start("hub");
+		});
+
+		// ----------------------------
+		// Input
+		// ----------------------------
+		const onKeyDown = (ev: KeyboardEvent) => {
+			let dx = 0;
+			let dy = 0;
+
+			switch (ev.code) {
+				case "KeyA":
+				case "ArrowLeft":
+					dx = -1;
+					break;
+				case "KeyD":
+				case "ArrowRight":
+					dx = 1;
+					break;
+				case "KeyW":
+				case "ArrowUp":
+					dy = -1;
+					break;
+				case "KeyS":
+				case "ArrowDown":
+					dy = 1;
+					break;
+				default:
+					return;
+			}
+
+			const me = (players as any).get(this.room.sessionId);
+			if (!me) return;
+
+			const ntx = me.tx + dx;
+			const nty = me.ty + dy;
+
+			if (this.isBlocked(ntx, nty, map)) return;
+
+			this.room.send("move", { dx, dy });
+		};
+
+		this.game.canvas?.setAttribute("tabindex", "0");
+		this.game.canvas?.addEventListener("pointerdown", () => {
+			this.game.canvas?.focus();
+		});
+
+		this.input.keyboard?.on("keydown", onKeyDown);
+
+		this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+			this.input.keyboard?.off("keydown", onKeyDown);
+		});
+	}
 }

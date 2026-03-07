@@ -1,18 +1,20 @@
 import fs from "node:fs";
 import path from "node:path";
 
+type TiledLayer = any;
+
 type TiledMap = {
 	width: number;
 	height: number;
 	tilewidth: number;
 	tileheight: number;
-	layers: any[];
+	layers: TiledLayer[];
 };
 
 export type BlockedGrid = {
 	w: number;
 	h: number;
-	blocked: Set<string>; // "tx,ty"
+	blocked: Set<string>;
 	isBlocked: (tx: number, ty: number) => boolean;
 };
 
@@ -21,12 +23,14 @@ function key(tx: number, ty: number) {
 }
 
 export function loadBlockedFromTiledJson(opts: {
-	jsonPath: string;               // absolute or relative to process.cwd()
-	objectLayerName?: string;       
+	jsonPath: string;
+	terrainLayerName?: string;
+	propsLayerName?: string;
 }): BlockedGrid {
 	const {
 		jsonPath,
-		objectLayerName = "Object Layer 1",
+		terrainLayerName = "Terrain",
+		propsLayerName = "Props",
 	} = opts;
 
 	const full = path.isAbsolute(jsonPath) ? jsonPath : path.join(process.cwd(), jsonPath);
@@ -35,12 +39,33 @@ export function loadBlockedFromTiledJson(opts: {
 
 	const blocked = new Set<string>();
 
-	// object layer blockers
-	const objLayer = map.layers.find((l: any) => l.type === "objectgroup" && l.name === objectLayerName);
-	if (objLayer?.objects?.length) {
-		for (const obj of objLayer.objects) {
-            const tx = Math.floor((obj.x ?? 0) / map.tilewidth);
-            const ty = Math.floor((obj.y ?? 0) / map.tileheight) - 1;
+	// 1) terrain tile layer blocks if tile is non-zero
+	const terrainLayer = map.layers.find(
+		(l: any) => l.type === "tilelayer" && l.name === terrainLayerName
+	);
+
+	if (terrainLayer?.data?.length) {
+		for (let i = 0; i < terrainLayer.data.length; i++) {
+			const gid = terrainLayer.data[i];
+			if (!gid) continue;
+
+			const tx = i % map.width;
+			const ty = Math.floor(i / map.width);
+			blocked.add(key(tx, ty));
+		}
+	}
+
+	// 2) props block on their base tile only
+	const propsLayer = map.layers.find(
+		(l: any) => l.type === "objectgroup" && l.name === propsLayerName
+	);
+
+	if (propsLayer?.objects?.length) {
+		for (const obj of propsLayer.objects) {
+			if (!obj.gid) continue;
+
+			const tx = Math.floor((obj.x ?? 0) / map.tilewidth);
+			const ty = Math.floor((obj.y ?? 0) / map.tileheight) - 1;
 			blocked.add(key(tx, ty));
 		}
 	}
