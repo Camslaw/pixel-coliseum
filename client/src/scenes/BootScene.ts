@@ -40,6 +40,16 @@ export default class BootScene extends Phaser.Scene {
 			frameWidth: 48,
 			frameHeight: 48,
 		});
+
+		this.load.spritesheet("player-bow-class", "/assets/bow-class-sprite.png", {
+			frameWidth: 48,
+			frameHeight: 48,
+		});
+
+		this.load.spritesheet("player-magic-class", "/assets/magic-class-sprite.png", {
+			frameWidth: 48,
+			frameHeight: 48,
+		});
 	}
 
 	create() {

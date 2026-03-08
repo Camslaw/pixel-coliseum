@@ -23,12 +23,11 @@ type RenderPlayer = {
 	sessionId: string;
 	sprite: Phaser.GameObjects.Sprite;
 	label: Phaser.GameObjects.Text;
+	className: "sword" | "bow" | "magic";
 
-	// client-side logical tile
 	tx: number;
 	ty: number;
 
-	// active render interpolation
 	fromX: number;
 	fromY: number;
 	toX: number;
@@ -44,7 +43,6 @@ type RenderPlayer = {
 	pendingInputs: PendingMove[];
 	nextInputSeq: number;
 
-	// local-player buffering
 	queuedMove: QueuedMove | null;
 };
 
@@ -86,7 +84,6 @@ export default class ArenaScene extends Phaser.Scene {
 	private playerFeetOffset = 8;
 	private nameYOffset = 0;
 	private moveRenderMs = 140;
-	private spriteKey = "player-sword-class";
 	private tileToWorldFeet?: (tx: number, ty: number) => { x: number; y: number };
 
 	constructor() {
@@ -137,8 +134,8 @@ export default class ArenaScene extends Phaser.Scene {
 		return this.blocked.has(this.key(tx, ty));
 	}
 
-	private getWalkAnimKey(facing: Facing) {
-		return `player-walk-${facing}`;
+	private getWalkAnimKey(className: "sword" | "bow" | "magic", facing: Facing) {
+		return `player-${className}-walk-${facing}`;
 	}
 
 	private syncLabel(rp: RenderPlayer, name?: string) {
@@ -150,10 +147,23 @@ export default class ArenaScene extends Phaser.Scene {
 		}
 	}
 
+	private normalizePlayerClass(v: unknown): "sword" | "bow" | "magic" {
+		if (v === "sword" || v === "bow" || v === "magic") return v;
+		return "sword";
+	}
+
+	private getSpriteKeyForClass(cls: unknown) {
+		const normalized = this.normalizePlayerClass(cls);
+
+		if (normalized === "bow") return "player-bow-class";
+		if (normalized === "magic") return "player-magic-class";
+		return "player-sword-class";
+	}
+
 	private setAnimState(rp: RenderPlayer, nextState: AnimState) {
 		if (rp.animState === nextState) {
 			if (nextState === "walk") {
-				rp.sprite.play(this.getWalkAnimKey(rp.facing), true);
+				rp.sprite.play(this.getWalkAnimKey(rp.className, rp.facing), true);
 			}
 			return;
 		}
@@ -161,7 +171,7 @@ export default class ArenaScene extends Phaser.Scene {
 		rp.animState = nextState;
 
 		if (nextState === "walk") {
-			rp.sprite.play(this.getWalkAnimKey(rp.facing), true);
+			rp.sprite.play(this.getWalkAnimKey(rp.className, rp.facing), true);
 			return;
 		}
 
@@ -370,17 +380,13 @@ export default class ArenaScene extends Phaser.Scene {
 
 		this.buildBlockedGrid(map);
 
-		const tex = this.textures.get(this.spriteKey);
-		console.log("frameTotal:", tex.frameTotal);
-		console.log("frames:", Object.keys(tex.frames).slice(0, 20));
-
 		const offsetX = Math.round((this.cameras.main.width - map.widthInPixels) / 2);
 		const offsetY = Math.round((this.cameras.main.height - map.heightInPixels) / 2);
 		const TILE = map.tileWidth;
 
-		const PLAYER_SCALE = 1.5;
+		const PLAYER_SCALE = 1.75;
 		this.playerFeetOffset = 8;
-		this.nameYOffset = Math.round(2.25 * TILE);
+		this.nameYOffset = Math.round(2.65 * TILE);
 
 		this.tileToWorldFeet = (tx: number, ty: number) => ({
 			x: Math.round(offsetX + (tx + 0.5) * TILE),
@@ -456,21 +462,33 @@ export default class ArenaScene extends Phaser.Scene {
 		}
 
 		const ensurePlayerAnimations = () => {
-			const make = (key: string, frames: readonly number[]) => {
+			const make = (
+				className: "sword" | "bow" | "magic",
+				facing: Facing,
+				frames: readonly number[]
+			) => {
+				const key = this.getWalkAnimKey(className, facing);
 				if (this.anims.exists(key)) return;
 
 				this.anims.create({
 					key,
-					frames: frames.map((frame) => ({ key: this.spriteKey, frame })),
+					frames: frames.map((frame) => ({
+						key: this.getSpriteKeyForClass(className),
+						frame,
+					})),
 					frameRate: WALK_FPS,
 					repeat: -1,
 				});
 			};
 
-			make("player-walk-down", this.animDef.down.walk);
-			make("player-walk-left", this.animDef.left.walk);
-			make("player-walk-right", this.animDef.right.walk);
-			make("player-walk-up", this.animDef.up.walk);
+			const classes: Array<"sword" | "bow" | "magic"> = ["sword", "bow", "magic"];
+
+			for (const cls of classes) {
+				make(cls, "down", this.animDef.down.walk);
+				make(cls, "left", this.animDef.left.walk);
+				make(cls, "right", this.animDef.right.walk);
+				make(cls, "up", this.animDef.up.walk);
+			}
 		};
 
 		ensurePlayerAnimations();
@@ -535,8 +553,11 @@ export default class ArenaScene extends Phaser.Scene {
 			const pos = this.tileToWorldFeet!(player.tx, player.ty);
 			const spriteY = pos.y - this.playerFeetOffset;
 
+			const className = this.normalizePlayerClass(player.class);
+			const spriteKey = this.getSpriteKeyForClass(className);
+
 			const sprite = this.add
-				.sprite(pos.x, spriteY, this.spriteKey, this.animDef.down.idle)
+				.sprite(pos.x, spriteY, spriteKey, this.animDef.down.idle)
 				.setOrigin(0.5, 1)
 				.setScale(PLAYER_SCALE);
 
@@ -555,6 +576,7 @@ export default class ArenaScene extends Phaser.Scene {
 				sessionId,
 				sprite,
 				label,
+				className,
 
 				tx: player.tx,
 				ty: player.ty,
