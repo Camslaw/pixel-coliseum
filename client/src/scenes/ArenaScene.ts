@@ -5,11 +5,89 @@ type ArenaSceneData = {
 	room: Room;
 };
 
+type Facing = "up" | "down" | "left" | "right";
+type AnimState = "idle" | "walk";
+
+type PendingMove = {
+	seq: number;
+	dx: number;
+	dy: number;
+};
+
+type QueuedMove = {
+	dx: number;
+	dy: number;
+};
+
+type RenderPlayer = {
+	sessionId: string;
+	sprite: Phaser.GameObjects.Sprite;
+	label: Phaser.GameObjects.Text;
+
+	// client-side logical tile
+	tx: number;
+	ty: number;
+
+	// active render interpolation
+	fromX: number;
+	fromY: number;
+	toX: number;
+	toY: number;
+
+	moveStartTime: number;
+	moveDuration: number;
+	isMoving: boolean;
+
+	facing: Facing;
+	animState: AnimState;
+
+	pendingInputs: PendingMove[];
+	nextInputSeq: number;
+
+	// local-player buffering
+	queuedMove: QueuedMove | null;
+};
+
 export default class ArenaScene extends Phaser.Scene {
 	private room!: Room;
-	private playerSprites = new Map<string, Phaser.GameObjects.Sprite>();
+	private renderPlayers = new Map<string, RenderPlayer>();
 	private playerListHud?: Phaser.GameObjects.Text;
 	private blocked = new Set<string>();
+	private lastMoveTime = 0;
+	private map?: Phaser.Tilemaps.Tilemap;
+	private moveIntervalMs = 160;
+
+	private moveKeys!: {
+		left: Phaser.Input.Keyboard.Key;
+		right: Phaser.Input.Keyboard.Key;
+		up: Phaser.Input.Keyboard.Key;
+		down: Phaser.Input.Keyboard.Key;
+	};
+
+	private animDef = {
+		down: {
+			idle: 1,
+			walk: [0, 1, 2, 1],
+		},
+		left: {
+			idle: 24,
+			walk: [23, 24, 25, 24],
+		},
+		right: {
+			idle: 47,
+			walk: [46, 47, 48, 47],
+		},
+		up: {
+			idle: 70,
+			walk: [69, 70, 71, 70],
+		},
+	} as const;
+
+	private playerFeetOffset = 8;
+	private nameYOffset = 0;
+	private moveRenderMs = 140;
+	private spriteKey = "player-sword-class";
+	private tileToWorldFeet?: (tx: number, ty: number) => { x: number; y: number };
 
 	constructor() {
 		super("arena");
@@ -26,7 +104,6 @@ export default class ArenaScene extends Phaser.Scene {
 	private buildBlockedGrid(map: Phaser.Tilemaps.Tilemap) {
 		this.blocked.clear();
 
-		// Terrain tiles block if non-empty
 		const terrainLayer = map.getLayer("Terrain")?.tilemapLayer;
 		if (terrainLayer) {
 			for (let ty = 0; ty < map.height; ty++) {
@@ -42,7 +119,6 @@ export default class ArenaScene extends Phaser.Scene {
 			}
 		}
 
-		// Props block only on their base tile
 		const propsLayer = map.getObjectLayer("Props");
 		if (propsLayer) {
 			for (const obj of propsLayer.objects) {
@@ -61,14 +137,240 @@ export default class ArenaScene extends Phaser.Scene {
 		return this.blocked.has(this.key(tx, ty));
 	}
 
+	private getWalkAnimKey(facing: Facing) {
+		return `player-walk-${facing}`;
+	}
+
+	private syncLabel(rp: RenderPlayer, name?: string) {
+		rp.label.setPosition(rp.sprite.x, rp.sprite.y - this.nameYOffset);
+		rp.label.setDepth(rp.sprite.depth + 1);
+
+		if (name !== undefined) {
+			rp.label.setText(name);
+		}
+	}
+
+	private setAnimState(rp: RenderPlayer, nextState: AnimState) {
+		if (rp.animState === nextState) {
+			if (nextState === "walk") {
+				rp.sprite.play(this.getWalkAnimKey(rp.facing), true);
+			}
+			return;
+		}
+
+		rp.animState = nextState;
+
+		if (nextState === "walk") {
+			rp.sprite.play(this.getWalkAnimKey(rp.facing), true);
+			return;
+		}
+
+		rp.sprite.anims.stop();
+		rp.sprite.setFrame(this.animDef[rp.facing].idle);
+	}
+
+	private beginRenderMove(
+		rp: RenderPlayer,
+		targetTx: number,
+		targetTy: number,
+		now: number,
+		duration: number,
+		facing: Facing
+	) {
+		if (!this.tileToWorldFeet) return;
+
+		const targetFeet = this.tileToWorldFeet(targetTx, targetTy);
+		const targetSpriteY = targetFeet.y - this.playerFeetOffset;
+
+		rp.fromX = rp.sprite.x;
+		rp.fromY = rp.sprite.y;
+		rp.toX = targetFeet.x;
+		rp.toY = targetSpriteY;
+		rp.moveStartTime = now;
+		rp.moveDuration = duration;
+		rp.isMoving = true;
+		rp.facing = facing;
+
+		this.setAnimState(rp, "walk");
+	}
+
+	private advanceRenderMove(rp: RenderPlayer, now: number) {
+		if (!rp.isMoving) return;
+
+		const t = Phaser.Math.Clamp(
+			(now - rp.moveStartTime) / rp.moveDuration,
+			0,
+			1
+		);
+
+		rp.sprite.x = Phaser.Math.Linear(rp.fromX, rp.toX, t);
+		rp.sprite.y = Phaser.Math.Linear(rp.fromY, rp.toY, t);
+		rp.sprite.setDepth(rp.sprite.y + this.playerFeetOffset);
+
+		this.syncLabel(rp);
+
+		if (t >= 1) {
+			rp.sprite.x = rp.toX;
+			rp.sprite.y = rp.toY;
+			rp.sprite.setDepth(rp.sprite.y + this.playerFeetOffset);
+
+			rp.isMoving = false;
+			this.setAnimState(rp, "idle");
+			this.syncLabel(rp);
+		}
+	}
+
+	private getFacingFromDelta(dx: number, dy: number): Facing {
+		if (dx < 0) return "left";
+		if (dx > 0) return "right";
+		if (dy < 0) return "up";
+		return "down";
+	}
+
+	private snapRenderPlayerToTile(rp: RenderPlayer, tx: number, ty: number) {
+		if (!this.tileToWorldFeet) return;
+
+		const pos = this.tileToWorldFeet(tx, ty);
+		const spriteY = pos.y - this.playerFeetOffset;
+
+		rp.sprite.setPosition(pos.x, spriteY);
+		rp.sprite.setDepth(pos.y);
+
+		rp.fromX = pos.x;
+		rp.fromY = spriteY;
+		rp.toX = pos.x;
+		rp.toY = spriteY;
+		rp.isMoving = false;
+	}
+
+	private reconcileLocalPlayer(rp: RenderPlayer, player: any) {
+		const serverTx = player.tx as number;
+		const serverTy = player.ty as number;
+		const lastProcessedInput = Number(player.lastProcessedInput ?? 0);
+
+		// Drop inputs the server has already processed.
+		rp.pendingInputs = rp.pendingInputs.filter((input) => input.seq > lastProcessedInput);
+
+		// Rebuild the predicted logical tile from the server position + remaining inputs.
+		let correctedTx = serverTx;
+		let correctedTy = serverTy;
+		let replayFacing = rp.facing;
+
+		for (const input of rp.pendingInputs) {
+			const ntx = correctedTx + input.dx;
+			const nty = correctedTy + input.dy;
+
+			if (!this.map || this.isBlocked(ntx, nty, this.map)) {
+				continue;
+			}
+
+			correctedTx = ntx;
+			correctedTy = nty;
+			replayFacing = this.getFacingFromDelta(input.dx, input.dy);
+		}
+
+		const needsLogicalCorrection = rp.tx !== correctedTx || rp.ty !== correctedTy;
+
+		// Update logical tile no matter what.
+		rp.tx = correctedTx;
+		rp.ty = correctedTy;
+
+		// If there is no mismatch, do NOT snap or restart movement.
+		if (!needsLogicalCorrection) {
+			this.syncLabel(rp, player.name ?? "Player");
+			return;
+		}
+
+		// Only do a visual correction when prediction truly diverged.
+		this.snapRenderPlayerToTile(rp, serverTx, serverTy);
+
+		if (rp.pendingInputs.length > 0) {
+			this.beginRenderMove(rp, correctedTx, correctedTy, this.time.now, this.moveRenderMs, replayFacing);
+		} else {
+			this.setAnimState(rp, "idle");
+			this.syncLabel(rp, player.name ?? "Player");
+		}
+	}
+
+	private getDesiredInputDirection(): QueuedMove | null {
+		let dx = 0;
+		let dy = 0;
+
+		if (this.moveKeys.left.isDown) dx = -1;
+		else if (this.moveKeys.right.isDown) dx = 1;
+		else if (this.moveKeys.up.isDown) dy = -1;
+		else if (this.moveKeys.down.isDown) dy = 1;
+		else return null;
+
+		return { dx, dy };
+	}
+
+	private tryStartPredictedLocalMove(dx: number, dy: number, now: number) {
+		if (!this.map) return false;
+
+		const meRp = this.renderPlayers.get(this.room.sessionId);
+		if (!meRp) return false;
+
+		const ntx = meRp.tx + dx;
+		const nty = meRp.ty + dy;
+
+		if (this.isBlocked(ntx, nty, this.map)) return false;
+
+		const facing = this.getFacingFromDelta(dx, dy);
+		const seq = ++meRp.nextInputSeq;
+
+		meRp.pendingInputs.push({ seq, dx, dy });
+
+		meRp.tx = ntx;
+		meRp.ty = nty;
+
+		this.beginRenderMove(meRp, ntx, nty, now, this.moveRenderMs, facing);
+
+		meRp.queuedMove = null;
+		this.lastMoveTime = now;
+		this.room.send("move", { dx, dy, seq });
+		return true;
+	}
+
+	private tryConsumeQueuedLocalMove(now: number) {
+		const meRp = this.renderPlayers.get(this.room.sessionId);
+		if (!meRp) return false;
+		if (meRp.isMoving) return false;
+		if (!meRp.queuedMove) return false;
+		if (now - this.lastMoveTime < this.moveIntervalMs) return false;
+
+		const { dx, dy } = meRp.queuedMove;
+		return this.tryStartPredictedLocalMove(dx, dy, now);
+	}
+
 	create() {
 		const map = this.make.tilemap({ key: "arena-map" });
+
+		this.moveRenderMs = 160;
+		const WALK_FPS = 10;
+		const MOVE_INTERVAL_MS = 160;
+
+		this.map = map;
+		this.moveIntervalMs = MOVE_INTERVAL_MS;
+
 		const tileset = map.addTilesetImage("arena-tileset", "tiles");
 		if (!tileset) throw new Error("Tileset mapping failed.");
 
+		this.moveKeys = this.input.keyboard!.addKeys({
+			left: Phaser.Input.Keyboard.KeyCodes.A,
+			right: Phaser.Input.Keyboard.KeyCodes.D,
+			up: Phaser.Input.Keyboard.KeyCodes.W,
+			down: Phaser.Input.Keyboard.KeyCodes.S,
+		}) as {
+			left: Phaser.Input.Keyboard.Key;
+			right: Phaser.Input.Keyboard.Key;
+			up: Phaser.Input.Keyboard.Key;
+			down: Phaser.Input.Keyboard.Key;
+		};
+
 		this.buildBlockedGrid(map);
 
-		const tex = this.textures.get("player-sword-class");
+		const tex = this.textures.get(this.spriteKey);
 		console.log("frameTotal:", tex.frameTotal);
 		console.log("frames:", Object.keys(tex.frames).slice(0, 20));
 
@@ -77,17 +379,14 @@ export default class ArenaScene extends Phaser.Scene {
 		const TILE = map.tileWidth;
 
 		const PLAYER_SCALE = 1.5;
-		const PLAYER_FEET_OFFSET = 8;
-		const NAME_Y_OFFSET = Math.round(2.25 * TILE);
+		this.playerFeetOffset = 8;
+		this.nameYOffset = Math.round(2.25 * TILE);
 
-		const tileToWorldFeet = (tx: number, ty: number) => ({
+		this.tileToWorldFeet = (tx: number, ty: number) => ({
 			x: Math.round(offsetX + (tx + 0.5) * TILE),
 			y: Math.round(offsetY + (ty + 1) * TILE),
 		});
 
-		// ----------------------------
-		// Base tile layers
-		// ----------------------------
 		const groundLayer = map.createLayer("Ground", tileset, offsetX, offsetY);
 		const groundDetailsLayer = map.createLayer("GroundDetails", tileset, offsetX, offsetY);
 		const terrainLayer = map.createLayer("Terrain", tileset, offsetX, offsetY);
@@ -96,23 +395,16 @@ export default class ArenaScene extends Phaser.Scene {
 		groundDetailsLayer?.setDepth(1);
 		terrainLayer?.setDepth(2);
 
-		// ----------------------------
-		// Props: depth-sort by their base Y
-		// ----------------------------
 		const propsLayer = map.getObjectLayer("Props");
 		if (propsLayer) {
 			for (const obj of propsLayer.objects) {
 				if (!("gid" in obj) || !obj.gid) continue;
 
 				const frame = obj.gid - tileset.firstgid;
-
-				// In Tiled tile objects, x/y is bottom-left of the tile object.
 				const x = Math.round((obj.x ?? 0) + (obj.width ?? 0) / 2 + offsetX);
 				const y = Math.round((obj.y ?? 0) + offsetY);
 
 				const prop = this.add.image(x, y, "tiles", frame).setOrigin(0.5, 1);
-
-				// Critical: sort by base Y
 				prop.setDepth(y);
 
 				if (obj.rotation) {
@@ -121,15 +413,9 @@ export default class ArenaScene extends Phaser.Scene {
 			}
 		}
 
-		// ----------------------------
-		// Overhangs: always above world actors
-		// ----------------------------
 		const overhangLayer = map.createLayer("Overhangs", tileset, offsetX, offsetY);
 		overhangLayer?.setDepth(5000);
 
-		// ----------------------------
-		// HUD
-		// ----------------------------
 		const leaveText = this.add
 			.text(16, 36, "Leave Game", {
 				fontFamily: "ui-monospace, monospace",
@@ -163,31 +449,101 @@ export default class ArenaScene extends Phaser.Scene {
 		this.playerListHud.setScrollFactor(0);
 		this.playerListHud.setDepth(9999);
 
-		// ----------------------------
-		// Players
-		// ----------------------------
 		const players = (this.room.state as any).players;
 		if (!players) {
 			console.warn("Room state has no players map yet.");
 			return;
 		}
 
-		const spawnPlayerSprite = (player: any, sessionId: string) => {
-			if (this.playerSprites.has(sessionId)) return;
+		const ensurePlayerAnimations = () => {
+			const make = (key: string, frames: readonly number[]) => {
+				if (this.anims.exists(key)) return;
 
-			const pos = tileToWorldFeet(player.tx, player.ty);
-			const spriteY = pos.y - PLAYER_FEET_OFFSET;
+				this.anims.create({
+					key,
+					frames: frames.map((frame) => ({ key: this.spriteKey, frame })),
+					frameRate: WALK_FPS,
+					repeat: -1,
+				});
+			};
+
+			make("player-walk-down", this.animDef.down.walk);
+			make("player-walk-left", this.animDef.left.walk);
+			make("player-walk-right", this.animDef.right.walk);
+			make("player-walk-up", this.animDef.up.walk);
+		};
+
+		ensurePlayerAnimations();
+
+		const syncToAuthoritativeState = (rp: RenderPlayer, player: any) => {
+			const isLocal = rp.sessionId === this.room.sessionId;
+
+			if (isLocal) {
+				this.reconcileLocalPlayer(rp, player);
+				return;
+			}
+
+			const prevTx = rp.tx;
+			const prevTy = rp.ty;
+			const nextTx = player.tx as number;
+			const nextTy = player.ty as number;
+
+			const moved = prevTx !== nextTx || prevTy !== nextTy;
+
+			if (!moved) {
+				if (!rp.isMoving) {
+					const pos = this.tileToWorldFeet!(nextTx, nextTy);
+					const spriteY = pos.y - this.playerFeetOffset;
+
+					rp.sprite.setPosition(pos.x, spriteY);
+					rp.sprite.setDepth(pos.y);
+					this.setAnimState(rp, "idle");
+				}
+
+				this.syncLabel(rp, player.name ?? "Player");
+				return;
+			}
+
+			const dx = nextTx - prevTx;
+			const dy = nextTy - prevTy;
+			const facing = this.getFacingFromDelta(dx, dy);
+
+			const targetFeet = this.tileToWorldFeet!(nextTx, nextTy);
+			const targetSpriteY = targetFeet.y - this.playerFeetOffset;
+
+			const alreadyMovingToSameTarget =
+				rp.isMoving &&
+				rp.toX === targetFeet.x &&
+				rp.toY === targetSpriteY;
+
+			if (!alreadyMovingToSameTarget) {
+				this.beginRenderMove(rp, nextTx, nextTy, this.time.now, this.moveRenderMs, facing);
+			} else {
+				rp.facing = facing;
+				this.setAnimState(rp, "walk");
+			}
+
+			this.syncLabel(rp, player.name ?? "Player");
+
+			rp.tx = nextTx;
+			rp.ty = nextTy;
+		};
+
+		const spawnPlayerSprite = (player: any, sessionId: string) => {
+			if (this.renderPlayers.has(sessionId)) return;
+
+			const pos = this.tileToWorldFeet!(player.tx, player.ty);
+			const spriteY = pos.y - this.playerFeetOffset;
 
 			const sprite = this.add
-				.sprite(pos.x, spriteY, "player-sword-class", 1)
+				.sprite(pos.x, spriteY, this.spriteKey, this.animDef.down.idle)
 				.setOrigin(0.5, 1)
 				.setScale(PLAYER_SCALE);
 
-			// Critical: player depth is based on feet Y
 			sprite.setDepth(pos.y);
 
 			const label = this.add
-				.text(pos.x, spriteY - NAME_Y_OFFSET, player.name ?? "Player", {
+				.text(pos.x, spriteY - this.nameYOffset, player.name ?? "Player", {
 					fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
 					fontSize: "12px",
 					color: "#ffffff",
@@ -195,27 +551,33 @@ export default class ArenaScene extends Phaser.Scene {
 				.setOrigin(0.5, 0.5)
 				.setDepth(pos.y + 1);
 
-			(sprite as any).__label = label;
-			this.playerSprites.set(sessionId, sprite);
-		};
+			const rp: RenderPlayer = {
+				sessionId,
+				sprite,
+				label,
 
-		const updateSpriteFromState = (sid: string) => {
-			const p = players.get(sid);
-			const sprite = this.playerSprites.get(sid);
-			if (!p || !sprite) return;
+				tx: player.tx,
+				ty: player.ty,
 
-			const pos = tileToWorldFeet(p.tx, p.ty);
-			const spriteY = pos.y - PLAYER_FEET_OFFSET;
+				fromX: sprite.x,
+				fromY: sprite.y,
+				toX: sprite.x,
+				toY: sprite.y,
 
-			sprite.setPosition(pos.x, spriteY);
-			sprite.setDepth(pos.y);
+				moveStartTime: 0,
+				moveDuration: this.moveRenderMs,
+				isMoving: false,
 
-			const label = (sprite as any).__label as Phaser.GameObjects.Text | undefined;
-			if (label) {
-				label.setPosition(pos.x, spriteY - NAME_Y_OFFSET);
-				label.setText(p.name ?? "Player");
-				label.setDepth(pos.y + 1);
-			}
+				facing: "down",
+				animState: "idle",
+
+				pendingInputs: [],
+				nextInputSeq: 0,
+				queuedMove: null,
+			};
+
+			this.syncLabel(rp, player.name ?? "Player");
+			this.renderPlayers.set(sessionId, rp);
 		};
 
 		const renderPlayerList = () => {
@@ -235,16 +597,25 @@ export default class ArenaScene extends Phaser.Scene {
 		};
 
 		players.forEach((p: any, sid: string) => spawnPlayerSprite(p, sid));
-		players.forEach((_p: any, sid: string) => updateSpriteFromState(sid));
+		players.forEach((p: any, sid: string) => {
+			const rp = this.renderPlayers.get(sid);
+			if (!rp) return;
+			syncToAuthoritativeState(rp, p);
+		});
 		renderPlayerList();
 
 		const onState = () => {
-			players.forEach((_p: any, sid: string) => {
-				if (!this.playerSprites.has(sid)) {
-					spawnPlayerSprite(players.get(sid), sid);
+			players.forEach((p: any, sid: string) => {
+				if (!this.renderPlayers.has(sid)) {
+					spawnPlayerSprite(p, sid);
 				}
-				updateSpriteFromState(sid);
+
+				const rp = this.renderPlayers.get(sid);
+				if (!rp) return;
+
+				syncToAuthoritativeState(rp, p);
 			});
+
 			renderPlayerList();
 		};
 
@@ -257,12 +628,11 @@ export default class ArenaScene extends Phaser.Scene {
 		});
 
 		players.onRemove = (_player: any, sessionId: string) => {
-			const sprite = this.playerSprites.get(sessionId);
-			if (sprite) {
-				const label = (sprite as any).__label as Phaser.GameObjects.Text | undefined;
-				label?.destroy();
-				sprite.destroy();
-				this.playerSprites.delete(sessionId);
+			const rp = this.renderPlayers.get(sessionId);
+			if (rp) {
+				rp.label.destroy();
+				rp.sprite.destroy();
+				this.renderPlayers.delete(sessionId);
 			}
 			renderPlayerList();
 		};
@@ -271,54 +641,48 @@ export default class ArenaScene extends Phaser.Scene {
 			this.scene.start("hub");
 		});
 
-		// ----------------------------
-		// Input
-		// ----------------------------
-		const onKeyDown = (ev: KeyboardEvent) => {
-			let dx = 0;
-			let dy = 0;
-
-			switch (ev.code) {
-				case "KeyA":
-				case "ArrowLeft":
-					dx = -1;
-					break;
-				case "KeyD":
-				case "ArrowRight":
-					dx = 1;
-					break;
-				case "KeyW":
-				case "ArrowUp":
-					dy = -1;
-					break;
-				case "KeyS":
-				case "ArrowDown":
-					dy = 1;
-					break;
-				default:
-					return;
-			}
-
-			const me = (players as any).get(this.room.sessionId);
-			if (!me) return;
-
-			const ntx = me.tx + dx;
-			const nty = me.ty + dy;
-
-			if (this.isBlocked(ntx, nty, map)) return;
-
-			this.room.send("move", { dx, dy });
-		};
-
 		this.game.canvas?.setAttribute("tabindex", "0");
 		this.game.canvas?.addEventListener("pointerdown", () => {
 			this.game.canvas?.focus();
 		});
+	}
 
-		this.input.keyboard?.on("keydown", onKeyDown);
+	update() {
+		if (!this.room || !this.moveKeys || !this.map) return;
 
-		this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-			this.input.keyboard?.off("keydown", onKeyDown);
-		});
+		const now = this.time.now;
+		const meRp = this.renderPlayers.get(this.room.sessionId);
+
+		// Advance all render interpolation
+		for (const rp of this.renderPlayers.values()) {
+			this.advanceRenderMove(rp, now);
+			if (!rp.isMoving) {
+				this.syncLabel(rp);
+			}
+		}
+
+		const desired = this.getDesiredInputDirection();
+
+		// If local player is currently moving, buffer the latest desired direction.
+		if (meRp?.isMoving) {
+			meRp.queuedMove = desired;
+			return;
+		}
+
+		// If a move is queued, try to consume it first as soon as movement/cooldown allows.
+		if (this.tryConsumeQueuedLocalMove(now)) {
+			return;
+		}
+
+		if (now - this.lastMoveTime < this.moveIntervalMs) {
+			if (desired && meRp) {
+				meRp.queuedMove = desired;
+			}
+			return;
+		}
+
+		if (!desired) return;
+
+		this.tryStartPredictedLocalMove(desired.dx, desired.dy, now);
 	}
 }

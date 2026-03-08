@@ -68,21 +68,39 @@ export class ArenaRoom extends Room<ArenaState> {
 			const dx = Math.sign(msg?.dx ?? 0);
 			const dy = Math.sign(msg?.dy ?? 0);
 
-			if (dx !== 0 && dy !== 0) return;
+			const rawSeq = Number(msg?.seq ?? 0);
+			const seq = Number.isFinite(rawSeq) ? Math.floor(rawSeq) : 0;
+
+			const ackProcessedInput = () => {
+				if (seq > p.lastProcessedInput) {
+					p.lastProcessedInput = seq;
+				}
+			};
+
+			// Reject diagonal or zero movement, but still acknowledge the processed input.
+			if ((dx !== 0 && dy !== 0) || (dx === 0 && dy === 0)) {
+				ackProcessedInput();
+				return;
+			}
 
 			const ntx = p.tx + dx;
 			const nty = p.ty + dy;
 
-			if (this.grid.isBlocked(ntx, nty)) return;
+			if (this.grid.isBlocked(ntx, nty)) {
+				ackProcessedInput();
+				return;
+			}
 
 			for (const other of this.state.players.values()) {
 				if (other.id !== p.id && other.tx === ntx && other.ty === nty) {
+					ackProcessedInput();
 					return;
 				}
 			}
 
 			p.tx = ntx;
 			p.ty = nty;
+			ackProcessedInput();
 		});
 	}
 
@@ -114,6 +132,7 @@ export class ArenaRoom extends Room<ArenaState> {
 		p.id = client.sessionId;
 		p.name = displayName;
 		p.class = "sword";
+		p.lastProcessedInput = 0;
 
 		const usedSpawnIndices = new Set<number>();
 		this.state.players.forEach((pl: any) => {
@@ -131,17 +150,17 @@ export class ArenaRoom extends Room<ArenaState> {
 			  ];
 
 		let spawnIndex = availableSpawns.findIndex((_s, i) => !usedSpawnIndices.has(i));
-    if (spawnIndex === -1) spawnIndex = 0;
+		if (spawnIndex === -1) spawnIndex = 0;
 
-    const spawn = availableSpawns[spawnIndex];
-    if (!spawn) {
-      throw new ServerError(5000, "NO_PLAYER_SPAWNS_DEFINED");
-    }
+		const spawn = availableSpawns[spawnIndex];
+		if (!spawn) {
+			throw new ServerError(5000, "NO_PLAYER_SPAWNS_DEFINED");
+		}
 
-    (p as any).spawnIndex = spawnIndex;
+		(p as any).spawnIndex = spawnIndex;
 
-    let tx = spawn.tx;
-    let ty = spawn.ty;
+		let tx = spawn.tx;
+		let ty = spawn.ty;
 
 		if (this.grid.isBlocked(tx, ty)) {
 			const maxR = 6;
