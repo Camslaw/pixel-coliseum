@@ -6,7 +6,7 @@ type ArenaSceneData = {
 };
 
 type Facing = "up" | "down" | "left" | "right";
-type AnimState = "idle" | "walk";
+type AnimState = "idle" | "walk" | "attack";
 
 type PendingMove = {
 	seq: number;
@@ -44,6 +44,9 @@ type RenderPlayer = {
 	nextInputSeq: number;
 
 	queuedMove: QueuedMove | null;
+
+	attackEndTime: number;
+	isAttacking: boolean;
 };
 
 export default class ArenaScene extends Phaser.Scene {
@@ -62,22 +65,28 @@ export default class ArenaScene extends Phaser.Scene {
 		down: Phaser.Input.Keyboard.Key;
 	};
 
+	private attackKey!: Phaser.Input.Keyboard.Key;
+
 	private animDef = {
 		down: {
 			idle: 1,
 			walk: [0, 1, 2, 1],
+			attack: [10, 11, 12, 13, 14]
 		},
 		left: {
 			idle: 24,
 			walk: [23, 24, 25, 24],
+			attack: [33, 34, 35, 36, 37]
 		},
 		right: {
 			idle: 47,
 			walk: [46, 47, 48, 47],
+			attack: [56, 57, 58, 59, 60]
 		},
 		up: {
 			idle: 70,
 			walk: [69, 70, 71, 70],
+			attack: [79, 80, 81, 82, 83]
 		},
 	} as const;
 
@@ -138,6 +147,10 @@ export default class ArenaScene extends Phaser.Scene {
 		return `player-${className}-walk-${facing}`;
 	}
 
+	private getAttackAnimKey(className: "sword" | "bow" | "magic", facing: Facing) {
+		return `player-${className}-attack-${facing}`;
+	}
+
 	private syncLabel(rp: RenderPlayer, name?: string) {
 		rp.label.setPosition(rp.sprite.x, rp.sprite.y - this.nameYOffset);
 		rp.label.setDepth(rp.sprite.depth + 1);
@@ -164,6 +177,8 @@ export default class ArenaScene extends Phaser.Scene {
 		if (rp.animState === nextState) {
 			if (nextState === "walk") {
 				rp.sprite.play(this.getWalkAnimKey(rp.className, rp.facing), true);
+			} else if (nextState === "attack") {
+				rp.sprite.play(this.getAttackAnimKey(rp.className, rp.facing), true);
 			}
 			return;
 		}
@@ -175,8 +190,45 @@ export default class ArenaScene extends Phaser.Scene {
 			return;
 		}
 
+		if (nextState === "attack") {
+			rp.sprite.play(this.getAttackAnimKey(rp.className, rp.facing), true);
+			return;
+		}
+
 		rp.sprite.anims.stop();
 		rp.sprite.setFrame(this.animDef[rp.facing].idle);
+	}
+
+		private getAttackDurationMs(rp: RenderPlayer) {
+		if (rp.className === "bow") return 220;
+		if (rp.className === "magic") return 260;
+		return 180; // sword
+	}
+
+	private tryStartLocalAttack(now: number) {
+		const meRp = this.renderPlayers.get(this.room.sessionId);
+		if (!meRp) return false;
+		if (meRp.isMoving) return false;
+		if (meRp.isAttacking) return false;
+
+		meRp.isAttacking = true;
+		meRp.attackEndTime = now + this.getAttackDurationMs(meRp);
+		meRp.queuedMove = null;
+
+		this.setAnimState(meRp, "attack");
+
+		// Optional later:
+		// this.room.send("attack", { facing: meRp.facing, class: meRp.className });
+
+		return true;
+	}
+
+	private advanceAttackState(rp: RenderPlayer, now: number) {
+		if (!rp.isAttacking) return;
+		if (now < rp.attackEndTime) return;
+
+		rp.isAttacking = false;
+		this.setAnimState(rp, "idle");
 	}
 
 	private beginRenderMove(
@@ -378,6 +430,10 @@ export default class ArenaScene extends Phaser.Scene {
 			down: Phaser.Input.Keyboard.Key;
 		};
 
+		this.attackKey = this.input.keyboard!.addKey(
+			Phaser.Input.Keyboard.KeyCodes.SPACE
+		);
+
 		this.buildBlockedGrid(map);
 
 		const offsetX = Math.round((this.cameras.main.width - map.widthInPixels) / 2);
@@ -462,7 +518,7 @@ export default class ArenaScene extends Phaser.Scene {
 		}
 
 		const ensurePlayerAnimations = () => {
-			const make = (
+			const makeWalk = (
 				className: "sword" | "bow" | "magic",
 				facing: Facing,
 				frames: readonly number[]
@@ -481,13 +537,37 @@ export default class ArenaScene extends Phaser.Scene {
 				});
 			};
 
+			const makeAttack = (
+				className: "sword" | "bow" | "magic",
+				facing: Facing,
+				frames: readonly number[]
+			) => {
+				const key = this.getAttackAnimKey(className, facing);
+				if (this.anims.exists(key)) return;
+
+				this.anims.create({
+					key,
+					frames: frames.map((frame) => ({
+						key: this.getSpriteKeyForClass(className),
+						frame,
+					})),
+					frameRate: 12,
+					repeat: 0,
+				});
+			};
+
 			const classes: Array<"sword" | "bow" | "magic"> = ["sword", "bow", "magic"];
 
 			for (const cls of classes) {
-				make(cls, "down", this.animDef.down.walk);
-				make(cls, "left", this.animDef.left.walk);
-				make(cls, "right", this.animDef.right.walk);
-				make(cls, "up", this.animDef.up.walk);
+				makeWalk(cls, "down", this.animDef.down.walk);
+				makeWalk(cls, "left", this.animDef.left.walk);
+				makeWalk(cls, "right", this.animDef.right.walk);
+				makeWalk(cls, "up", this.animDef.up.walk);
+
+				makeAttack(cls, "down", this.animDef.down.attack);
+				makeAttack(cls, "left", this.animDef.left.attack);
+				makeAttack(cls, "right", this.animDef.right.attack);
+				makeAttack(cls, "up", this.animDef.up.attack);
 			}
 		};
 
@@ -596,6 +676,9 @@ export default class ArenaScene extends Phaser.Scene {
 				pendingInputs: [],
 				nextInputSeq: 0,
 				queuedMove: null,
+
+				attackEndTime: 0,
+				isAttacking: false,
 			};
 
 			this.syncLabel(rp, player.name ?? "Player");
@@ -675,12 +758,27 @@ export default class ArenaScene extends Phaser.Scene {
 		const now = this.time.now;
 		const meRp = this.renderPlayers.get(this.room.sessionId);
 
-		// Advance all render interpolation
+		// Advance all render interpolation and attack timers
 		for (const rp of this.renderPlayers.values()) {
 			this.advanceRenderMove(rp, now);
-			if (!rp.isMoving) {
+			this.advanceAttackState(rp, now);
+
+			if (!rp.isMoving && !rp.isAttacking) {
 				this.syncLabel(rp);
 			}
+		}
+
+		// Start attack on SPACE press
+		if (Phaser.Input.Keyboard.JustDown(this.attackKey)) {
+			if (this.tryStartLocalAttack(now)) {
+				return;
+			}
+		}
+
+		// Local player cannot move while attacking
+		if (meRp?.isAttacking) {
+			meRp.queuedMove = null;
+			return;
 		}
 
 		const desired = this.getDesiredInputDirection();
