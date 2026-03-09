@@ -225,23 +225,23 @@ export default class ArenaScene extends Phaser.Scene {
 		switch (rp.facing) {
 			case "right":
 				dx = 1;
-				spawnOffsetX = 20;
-				spawnOffsetY = -34;
+				spawnOffsetX = 10;
+				spawnOffsetY = -40;
 				break;
 			case "left":
 				dx = -1;
-				spawnOffsetX = -20;
-				spawnOffsetY = -34;
+				spawnOffsetX = -10;
+				spawnOffsetY = -40;
 				break;
 			case "up":
 				dy = -1;
 				spawnOffsetX = 0;
-				spawnOffsetY = -42;
+				spawnOffsetY = -52;
 				break;
 			case "down":
 				dy = 1;
 				spawnOffsetX = 0;
-				spawnOffsetY = -22;
+				spawnOffsetY = -28;
 				break;
 		}
 
@@ -329,12 +329,12 @@ export default class ArenaScene extends Phaser.Scene {
 			case "up":
 				dy = -1;
 				spawnOffsetX = 0;
-				spawnOffsetY = -42;
+				spawnOffsetY = -70;
 				break;
 			case "down":
 				dy = 1;
 				spawnOffsetX = 0;
-				spawnOffsetY = -20;
+				spawnOffsetY = -28;
 				break;
 		}
 
