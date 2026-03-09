@@ -50,6 +50,11 @@ export default class BootScene extends Phaser.Scene {
 			frameWidth: 48,
 			frameHeight: 48,
 		});
+
+		this.load.spritesheet("arrow-projectile", "assets/arrow.png", {
+			frameWidth: 48,
+			frameHeight: 48,
+		});
 	}
 
 	create() {

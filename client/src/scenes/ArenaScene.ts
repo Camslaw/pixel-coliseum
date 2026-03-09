@@ -68,25 +68,44 @@ export default class ArenaScene extends Phaser.Scene {
 	private attackKey!: Phaser.Input.Keyboard.Key;
 
 	private animDef = {
-		down: {
-			idle: 1,
-			walk: [0, 1, 2, 1],
-			attack: [10, 11, 12, 13, 14]
+		idleWalk: {
+			down: {
+				idle: 1,
+				walk: [0, 1, 2, 1]
+			},
+			left: {
+				idle: 24,
+				walk: [23, 24, 25, 24]
+			},
+			right: {
+				idle: 47,
+				walk: [46, 47, 48, 47]
+			},
+			up: {
+				idle: 70,
+				walk: [69, 70, 71, 70],
+			},
+
 		},
-		left: {
-			idle: 24,
-			walk: [23, 24, 25, 24],
-			attack: [33, 34, 35, 36, 37]
-		},
-		right: {
-			idle: 47,
-			walk: [46, 47, 48, 47],
-			attack: [56, 57, 58, 59, 60]
-		},
-		up: {
-			idle: 70,
-			walk: [69, 70, 71, 70],
-			attack: [79, 80, 81, 82, 83]
+		attack: {
+			sword: {
+				down: [10, 11, 12, 13, 14],
+				left: [33, 34, 35, 36, 37],
+				right: [56, 57, 58, 59, 60],
+				up: [79, 80, 81, 82, 83]
+			},
+			bow: {
+				down: [15, 16, 17, 18],
+				left: [38, 39, 40, 41],
+				right: [61, 62, 63, 64],
+				up: [84, 85, 86, 87]
+			},
+			magic: {
+				down: [15, 16, 17, 18],
+				left: [38, 39, 40, 41],
+				right: [61, 62, 63, 64],
+				up: [84, 85, 86, 87]
+			},
 		},
 	} as const;
 
@@ -165,6 +184,109 @@ export default class ArenaScene extends Phaser.Scene {
 		return "sword";
 	}
 
+	private getArrowFrame(facing: Facing) {
+		switch (facing) {
+			case "up": return 86;
+			case "down": return 17;
+			case "left": return 40;
+			case "right": return 63;
+		}
+	}
+
+	private fireArrow(rp: RenderPlayer) {
+		if (!this.map || !this.tileToWorldFeet) return;
+
+		const arrow = this.add.sprite(
+			rp.sprite.x,
+			rp.sprite.y,
+			"arrow-projectile",
+			this.getArrowFrame(rp.facing)
+		);
+
+		arrow.setScale(1.75);
+		arrow.setDepth(rp.sprite.depth + 5);
+
+		let dx = 0;
+		let dy = 0;
+
+		// visual spawn offsets
+		let spawnOffsetX = 0;
+		let spawnOffsetY = 0;
+
+		switch (rp.facing) {
+			case "right":
+				dx = 1;
+				spawnOffsetX = 20;
+				spawnOffsetY = -34;
+				break;
+			case "left":
+				dx = -1;
+				spawnOffsetX = -20;
+				spawnOffsetY = -34;
+				break;
+			case "up":
+				dy = -1;
+				spawnOffsetX = 0;
+				spawnOffsetY = -42;
+				break;
+			case "down":
+				dy = 1;
+				spawnOffsetX = 0;
+				spawnOffsetY = -22;
+				break;
+		}
+
+		arrow.x += spawnOffsetX;
+		arrow.y += spawnOffsetY;
+
+		// Start from the player's current tile and march outward
+		let testTx = rp.tx;
+		let testTy = rp.ty;
+
+		let lastOpenTx = rp.tx;
+		let lastOpenTy = rp.ty;
+
+		while (true) {
+			const nextTx = testTx + dx;
+			const nextTy = testTy + dy;
+
+			if (this.isBlocked(nextTx, nextTy, this.map)) {
+				break;
+			}
+
+			lastOpenTx = nextTx;
+			lastOpenTy = nextTy;
+			testTx = nextTx;
+			testTy = nextTy;
+		}
+
+		// If no open tile ahead, destroy immediately
+		if (lastOpenTx === rp.tx && lastOpenTy === rp.ty) {
+			arrow.destroy();
+			return;
+		}
+
+		const targetFeet = this.tileToWorldFeet(lastOpenTx, lastOpenTy);
+
+		// Match the same visual offset at the destination
+		const targetX = targetFeet.x + spawnOffsetX;
+		const targetY = (targetFeet.y - this.playerFeetOffset) + spawnOffsetY;
+
+		const distancePx = Phaser.Math.Distance.Between(arrow.x, arrow.y, targetX, targetY);
+		const projectileSpeed = 320; // pixels per second
+		const duration = (distancePx / projectileSpeed) * 1000;
+
+		this.tweens.add({
+			targets: arrow,
+			x: targetX,
+			y: targetY,
+			duration,
+			onComplete: () => {
+				arrow.destroy();
+			},
+		});
+	}
+
 	private getSpriteKeyForClass(cls: unknown) {
 		const normalized = this.normalizePlayerClass(cls);
 
@@ -196,7 +318,7 @@ export default class ArenaScene extends Phaser.Scene {
 		}
 
 		rp.sprite.anims.stop();
-		rp.sprite.setFrame(this.animDef[rp.facing].idle);
+		rp.sprite.setFrame(this.animDef.idleWalk[rp.facing].idle);
 	}
 
 		private getAttackDurationMs(rp: RenderPlayer) {
@@ -216,6 +338,10 @@ export default class ArenaScene extends Phaser.Scene {
 		meRp.queuedMove = null;
 
 		this.setAnimState(meRp, "attack");
+
+		if (meRp.className === "bow") {
+			this.fireArrow(meRp);
+		}
 
 		// Optional later:
 		// this.room.send("attack", { facing: meRp.facing, class: meRp.className });
@@ -559,15 +685,15 @@ export default class ArenaScene extends Phaser.Scene {
 			const classes: Array<"sword" | "bow" | "magic"> = ["sword", "bow", "magic"];
 
 			for (const cls of classes) {
-				makeWalk(cls, "down", this.animDef.down.walk);
-				makeWalk(cls, "left", this.animDef.left.walk);
-				makeWalk(cls, "right", this.animDef.right.walk);
-				makeWalk(cls, "up", this.animDef.up.walk);
+				makeWalk(cls, "down", this.animDef.idleWalk.down.walk);
+				makeWalk(cls, "left", this.animDef.idleWalk.left.walk);
+				makeWalk(cls, "right", this.animDef.idleWalk.right.walk);
+				makeWalk(cls, "up", this.animDef.idleWalk.up.walk);
 
-				makeAttack(cls, "down", this.animDef.down.attack);
-				makeAttack(cls, "left", this.animDef.left.attack);
-				makeAttack(cls, "right", this.animDef.right.attack);
-				makeAttack(cls, "up", this.animDef.up.attack);
+				makeAttack(cls, "down", this.animDef.attack[cls].down);
+				makeAttack(cls, "left", this.animDef.attack[cls].left);
+				makeAttack(cls, "right", this.animDef.attack[cls].right);
+				makeAttack(cls, "up", this.animDef.attack[cls].up);
 			}
 		};
 
@@ -637,7 +763,7 @@ export default class ArenaScene extends Phaser.Scene {
 			const spriteKey = this.getSpriteKeyForClass(className);
 
 			const sprite = this.add
-				.sprite(pos.x, spriteY, spriteKey, this.animDef.down.idle)
+				.sprite(pos.x, spriteY, spriteKey, this.animDef.idleWalk.down.idle)
 				.setOrigin(0.5, 1)
 				.setScale(PLAYER_SCALE);
 
