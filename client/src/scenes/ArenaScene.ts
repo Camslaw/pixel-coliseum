@@ -192,6 +192,15 @@ export default class ArenaScene extends Phaser.Scene {
 			case "right": return 63;
 		}
 	}
+	
+	private getMagicBallFrame(facing: Facing) {
+		switch (facing) {
+			case "up": return 0;
+			case "down": return 1;
+			case "left": return 2;
+			case "right": return 3;
+		}
+	}
 
 	private fireArrow(rp: RenderPlayer) {
 		if (!this.map || !this.tileToWorldFeet) return;
@@ -287,6 +296,95 @@ export default class ArenaScene extends Phaser.Scene {
 		});
 	}
 
+	private fireMagicBall(rp: RenderPlayer) {
+		if (!this.map || !this.tileToWorldFeet) return;
+
+		const ball = this.add.sprite(
+			rp.sprite.x,
+			rp.sprite.y,
+			"magic-ball-projectile",
+			this.getMagicBallFrame(rp.facing)
+		);
+
+		ball.setScale(1.2);
+		ball.setDepth(rp.sprite.depth + 5);
+
+		let dx = 0;
+		let dy = 0;
+
+		let spawnOffsetX = 0;
+		let spawnOffsetY = 0;
+
+		switch (rp.facing) {
+			case "right":
+				dx = 1;
+				spawnOffsetX = 16;
+				spawnOffsetY = -46;
+				break;
+			case "left":
+				dx = -1;
+				spawnOffsetX = -16;
+				spawnOffsetY = -46;
+				break;
+			case "up":
+				dy = -1;
+				spawnOffsetX = 0;
+				spawnOffsetY = -42;
+				break;
+			case "down":
+				dy = 1;
+				spawnOffsetX = 0;
+				spawnOffsetY = -20;
+				break;
+		}
+
+		ball.x += spawnOffsetX;
+		ball.y += spawnOffsetY;
+
+		let testTx = rp.tx;
+		let testTy = rp.ty;
+
+		let lastOpenTx = rp.tx;
+		let lastOpenTy = rp.ty;
+
+		while (true) {
+			const nextTx = testTx + dx;
+			const nextTy = testTy + dy;
+
+			if (this.isBlocked(nextTx, nextTy, this.map)) {
+				break;
+			}
+
+			lastOpenTx = nextTx;
+			lastOpenTy = nextTy;
+			testTx = nextTx;
+			testTy = nextTy;
+		}
+
+		if (lastOpenTx === rp.tx && lastOpenTy === rp.ty) {
+			ball.destroy();
+			return;
+		}
+
+		const targetFeet = this.tileToWorldFeet(lastOpenTx, lastOpenTy);
+		const targetX = targetFeet.x + spawnOffsetX;
+		const targetY = (targetFeet.y - this.playerFeetOffset) + spawnOffsetY;
+
+		const distancePx = Phaser.Math.Distance.Between(ball.x, ball.y, targetX, targetY);
+		const projectileSpeed = 260;
+		const duration = (distancePx / projectileSpeed) * 1000;
+
+		this.tweens.add({
+			targets: ball,
+			x: targetX,
+			y: targetY,
+			duration,
+			onComplete: () => {
+				ball.destroy();
+			},
+		});
+	}
+
 	private getSpriteKeyForClass(cls: unknown) {
 		const normalized = this.normalizePlayerClass(cls);
 
@@ -341,6 +439,8 @@ export default class ArenaScene extends Phaser.Scene {
 
 		if (meRp.className === "bow") {
 			this.fireArrow(meRp);
+		} else if (meRp.className === "magic") {
+			this.fireMagicBall(meRp);
 		}
 
 		// Optional later:

@@ -55,6 +55,11 @@ export default class BootScene extends Phaser.Scene {
 			frameWidth: 48,
 			frameHeight: 48,
 		});
+
+		this.load.spritesheet("magic-ball-projectile", "assets/magic.png", {
+			frameWidth: 32,
+			frameHeight: 32,
+		});
 	}
 
 	create() {
