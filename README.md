@@ -54,6 +54,9 @@ The project will be developed using:
 ## Test Plan (Assignment 1, Semester 2)
 - [Test Plan](assignments/test-plan.md)
 
+## User Docs (Assignment 2, Semester 2)
+- [User Docs](assignments/user-docs.md)
+
 ## Budget
 I have spent $1 of my own money on a pixel art pack. I also purchased Aseprite for $19.99 with my own money, which will be a useful pixel art editing tool for sprite creation or editing purposes.
 
