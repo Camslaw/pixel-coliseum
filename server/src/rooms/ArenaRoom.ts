@@ -1,5 +1,5 @@
 import { Room, Client, ServerError } from "@colyseus/core";
-import { ArenaState, Player } from "../state/ArenaState";
+import { ArenaState, Player, Enemy } from "../state/ArenaState";
 import { pool } from "../db/pool";
 import { sessionMiddleware } from "../session";
 import { loadBlockedFromTiledJson, type BlockedGrid } from "../map/blocking";
@@ -30,6 +30,8 @@ function hydrateSession(req: any): Promise<void> {
 export class ArenaRoom extends Room<ArenaState> {
 	private grid!: BlockedGrid;
 	private playerSpawns: SpawnPoint[] = [];
+	private enemySpawns: SpawnPoint[] = [];
+	private nextEnemyId = 1;
 
 	onCreate(_options: any) {
 		this.state = new ArenaState();
@@ -46,6 +48,11 @@ export class ArenaRoom extends Room<ArenaState> {
 		this.playerSpawns = loadSpawnPointsFromTiledJson({
 			jsonPath,
 			layerName: "PlayerSpawns",
+		});
+
+		this.enemySpawns = loadSpawnPointsFromTiledJson({
+			jsonPath,
+			layerName: "EnemySpawns",
 		});
 
 		this.onMessage("start_game", (client) => {
@@ -77,7 +84,6 @@ export class ArenaRoom extends Room<ArenaState> {
 				}
 			};
 
-			// Reject diagonal or zero movement, but still acknowledge the processed input.
 			if ((dx !== 0 && dy !== 0) || (dx === 0 && dy === 0)) {
 				ackProcessedInput();
 				return;
@@ -102,6 +108,58 @@ export class ArenaRoom extends Room<ArenaState> {
 			p.ty = nty;
 			ackProcessedInput();
 		});
+	}
+
+	private isTileOccupiedByPlayer(tx: number, ty: number) {
+		for (const p of this.state.players.values()) {
+			if (p.tx === tx && p.ty === ty) return true;
+		}
+		return false;
+	}
+
+	private isTileOccupiedByEnemy(tx: number, ty: number) {
+		for (const e of this.state.enemies.values()) {
+			if (e.alive && e.tx === tx && e.ty === ty) return true;
+		}
+		return false;
+	}
+
+	private spawnInitialEnemy() {
+		if (this.state.enemies.size > 0) return;
+
+		const availableSpawns = this.enemySpawns.length > 0
+			? this.enemySpawns
+			: [
+					{ tx: 14, ty: 2, x: 0, y: 0 },
+					{ tx: 15, ty: 2, x: 0, y: 0 },
+					{ tx: 1, ty: 9, x: 0, y: 0 },
+					{ tx: 28, ty: 9, x: 0, y: 0 },
+					{ tx: 14, ty: 18, x: 0, y: 0 },
+					{ tx: 15, ty: 18, x: 0, y: 0 },
+			  ];
+
+		const validSpawn = availableSpawns.find((spawn) => {
+			if (this.grid.isBlocked(spawn.tx, spawn.ty)) return false;
+			if (this.isTileOccupiedByPlayer(spawn.tx, spawn.ty)) return false;
+			if (this.isTileOccupiedByEnemy(spawn.tx, spawn.ty)) return false;
+			return true;
+		});
+
+		if (!validSpawn) {
+			console.warn("No valid enemy spawn found.");
+			return;
+		}
+
+		const enemy = new Enemy();
+		enemy.id = `${this.roomId}_enemy_${this.nextEnemyId++}`;
+		enemy.kind = "orc";
+		enemy.tx = validSpawn.tx;
+		enemy.ty = validSpawn.ty;
+		enemy.facing = "down";
+		enemy.animState = "idle";
+		enemy.alive = true;
+
+		this.state.enemies.set(enemy.id, enemy);
 	}
 
 	async onAuth(client: Client, _options: JoinOptions, reqFromOnAuth: any) {
@@ -157,7 +215,7 @@ export class ArenaRoom extends Room<ArenaState> {
 			throw new ServerError(5000, "NO_PLAYER_SPAWNS_DEFINED");
 		}
 
-		(p as any).spawnIndex = spawnIndex;
+		p.spawnIndex = spawnIndex;
 
 		let tx = spawn.tx;
 		let ty = spawn.ty;
@@ -166,22 +224,14 @@ export class ArenaRoom extends Room<ArenaState> {
 			const maxR = 6;
 			let found = false;
 
-			for (let r = 1; r <= maxR && !found; r++) {
-				for (let dy = -r; dy <= r && !found; dy++) {
-					for (let dx = -r; dx <= r && !found; dx++) {
+			for (let r2 = 1; r2 <= maxR && !found; r2++) {
+				for (let dy = -r2; dy <= r2 && !found; dy++) {
+					for (let dx = -r2; dx <= r2 && !found; dx++) {
 						const nx = tx + dx;
 						const ny = ty + dy;
 
 						if (this.grid.isBlocked(nx, ny)) continue;
-
-						let occupied = false;
-						for (const other of this.state.players.values()) {
-							if (other.tx === nx && other.ty === ny) {
-								occupied = true;
-								break;
-							}
-						}
-						if (occupied) continue;
+						if (this.isTileOccupiedByPlayer(nx, ny)) continue;
 
 						tx = nx;
 						ty = ny;
@@ -196,6 +246,9 @@ export class ArenaRoom extends Room<ArenaState> {
 
 		this.state.players.set(client.sessionId, p);
 		if (!this.state.hostId) this.state.hostId = client.sessionId;
+
+		// Phase 1 test spawn: one server-controlled orc
+		this.spawnInitialEnemy();
 	}
 
 	onLeave(client: Client) {

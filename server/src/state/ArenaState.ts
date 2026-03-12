@@ -1,18 +1,34 @@
-import { Schema, type, MapSchema } from "@colyseus/schema";
+import { Schema, MapSchema, type } from "@colyseus/schema";
 
 export class Player extends Schema {
-	@type("string") id: string = "";
-	@type("string") name: string = "";
-	@type("string") class: string = "sword";
-	@type("number") tx: number = 0;
-	@type("number") ty: number = 0;
+	@type("string") id = "";
+	@type("string") name = "";
+	@type("string") class = "sword";
 
-	@type("number") lastProcessedInput: number = 0;
+	@type("number") tx = 0;
+	@type("number") ty = 0;
+
+	@type("number") lastProcessedInput = 0;
+	@type("number") spawnIndex = -1;
+}
+
+export class Enemy extends Schema {
+	@type("string") id = "";
+	@type("string") kind = "orc";
+
+	@type("number") tx = 0;
+	@type("number") ty = 0;
+
+	@type("string") facing = "down";
+	@type("string") animState = "idle";
+
+	@type("boolean") alive = true;
 }
 
 export class ArenaState extends Schema {
 	@type({ map: Player }) players = new MapSchema<Player>();
+	@type({ map: Enemy }) enemies = new MapSchema<Enemy>();
 
-	@type("string") phase: "lobby" | "playing" = "lobby";
-	@type("string") hostId: string = "";
+	@type("string") hostId = "";
+	@type("string") phase = "lobby";
 }

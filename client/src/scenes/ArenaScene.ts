@@ -1,57 +1,50 @@
 import Phaser from "phaser";
 import type { Room } from "colyseus.js";
-
-type ArenaSceneData = {
-	room: Room;
-};
-
-type Facing = "up" | "down" | "left" | "right";
-type AnimState = "idle" | "walk" | "attack";
-
-type PendingMove = {
-	seq: number;
-	dx: number;
-	dy: number;
-};
-
-type QueuedMove = {
-	dx: number;
-	dy: number;
-};
-
-type RenderPlayer = {
-	sessionId: string;
-	sprite: Phaser.GameObjects.Sprite;
-	label: Phaser.GameObjects.Text;
-	className: "sword" | "bow" | "magic";
-
-	tx: number;
-	ty: number;
-
-	fromX: number;
-	fromY: number;
-	toX: number;
-	toY: number;
-
-	moveStartTime: number;
-	moveDuration: number;
-	isMoving: boolean;
-
-	facing: Facing;
-	animState: AnimState;
-
-	pendingInputs: PendingMove[];
-	nextInputSeq: number;
-
-	queuedMove: QueuedMove | null;
-
-	attackEndTime: number;
-	isAttacking: boolean;
-};
+import type {
+	ArenaSceneData,
+	AnimState,
+	RenderPlayer,
+	RenderEnemy,
+} from "./arena/arenaTypes";
+import {
+	animDef,
+	getWalkAnimKey,
+	getAttackAnimKey,
+	ensurePlayerAnimations,
+	ensureEnemyAnimations,
+} from "./arena/arenaAnimations";
+import { buildBlockedGrid } from "./arena/arenaCollision";
+import { fireArrow, fireMagicBall } from "./arena/arenaProjectiles";
+import {
+	getFacingFromDelta,
+	beginRenderMove,
+	advanceRenderMove,
+	reconcileLocalPlayer,
+	getDesiredInputDirection,
+	tryStartPredictedLocalMove,
+	tryConsumeQueuedLocalMove,
+} from "./arena/arenaMovement";
+import {
+	spawnEnemySprite,
+	syncEnemyToAuthoritativeState,
+	advanceEnemyRenderMove,
+	removeEnemySprite,
+} from "./arena/arenaEnemies";
+import {
+	syncLabel,
+	normalizePlayerClass,
+	getSpriteKeyForClass,
+	setAnimState,
+	tryStartLocalAttack,
+	advanceAttackState,
+	spawnPlayerSprite,
+	removePlayerSprite,
+} from "./arena/arenaPlayers";
 
 export default class ArenaScene extends Phaser.Scene {
 	private room!: Room;
 	private renderPlayers = new Map<string, RenderPlayer>();
+	private renderEnemies = new Map<string, RenderEnemy>();
 	private playerListHud?: Phaser.GameObjects.Text;
 	private blocked = new Set<string>();
 	private lastMoveTime = 0;
@@ -67,48 +60,6 @@ export default class ArenaScene extends Phaser.Scene {
 
 	private attackKey!: Phaser.Input.Keyboard.Key;
 
-	private animDef = {
-		idleWalk: {
-			down: {
-				idle: 1,
-				walk: [0, 1, 2, 1]
-			},
-			left: {
-				idle: 24,
-				walk: [23, 24, 25, 24]
-			},
-			right: {
-				idle: 47,
-				walk: [46, 47, 48, 47]
-			},
-			up: {
-				idle: 70,
-				walk: [69, 70, 71, 70],
-			},
-
-		},
-		attack: {
-			sword: {
-				down: [10, 11, 12, 13, 14],
-				left: [33, 34, 35, 36, 37],
-				right: [56, 57, 58, 59, 60],
-				up: [79, 80, 81, 82, 83]
-			},
-			bow: {
-				down: [15, 16, 17, 18],
-				left: [38, 39, 40, 41],
-				right: [61, 62, 63, 64],
-				up: [84, 85, 86, 87]
-			},
-			magic: {
-				down: [15, 16, 17, 18],
-				left: [38, 39, 40, 41],
-				right: [61, 62, 63, 64],
-				up: [84, 85, 86, 87]
-			},
-		},
-	} as const;
-
 	private playerFeetOffset = 8;
 	private nameYOffset = 0;
 	private moveRenderMs = 140;
@@ -122,516 +73,30 @@ export default class ArenaScene extends Phaser.Scene {
 		this.room = data.room;
 	}
 
-	private key(tx: number, ty: number) {
-		return `${tx},${ty}`;
-	}
+	private getMovementContext() {
+		if (!this.map || !this.tileToWorldFeet) return null;
 
-	private buildBlockedGrid(map: Phaser.Tilemaps.Tilemap) {
-		this.blocked.clear();
-
-		const terrainLayer = map.getLayer("Terrain")?.tilemapLayer;
-		if (terrainLayer) {
-			for (let ty = 0; ty < map.height; ty++) {
-				for (let tx = 0; tx < map.width; tx++) {
-					const tile = terrainLayer.getTileAt(tx, ty);
-					if (tile && tile.index !== -1) {
-						const blockedTy = ty + 1;
-						if (blockedTy < map.height) {
-							this.blocked.add(this.key(tx, blockedTy));
-						}
-					}
-				}
-			}
-		}
-
-		const propsLayer = map.getObjectLayer("Props");
-		if (propsLayer) {
-			for (const obj of propsLayer.objects) {
-				if (!("gid" in obj) || !obj.gid) continue;
-
-				const tx = Math.floor((obj.x ?? 0) / map.tileWidth);
-				const ty = Math.floor((obj.y ?? 0) / map.tileHeight);
-				this.blocked.add(this.key(tx, ty));
-			}
-		}
-	}
-
-	private isBlocked(tx: number, ty: number, map: Phaser.Tilemaps.Tilemap) {
-		if (tx < 0 || ty < 0) return true;
-		if (tx >= map.width || ty >= map.height) return true;
-		return this.blocked.has(this.key(tx, ty));
-	}
-
-	private getWalkAnimKey(className: "sword" | "bow" | "magic", facing: Facing) {
-		return `player-${className}-walk-${facing}`;
-	}
-
-	private getAttackAnimKey(className: "sword" | "bow" | "magic", facing: Facing) {
-		return `player-${className}-attack-${facing}`;
-	}
-
-	private syncLabel(rp: RenderPlayer, name?: string) {
-		rp.label.setPosition(rp.sprite.x, rp.sprite.y - this.nameYOffset);
-		rp.label.setDepth(rp.sprite.depth + 1);
-
-		if (name !== undefined) {
-			rp.label.setText(name);
-		}
-	}
-
-	private normalizePlayerClass(v: unknown): "sword" | "bow" | "magic" {
-		if (v === "sword" || v === "bow" || v === "magic") return v;
-		return "sword";
-	}
-
-	private getArrowFrame(facing: Facing) {
-		switch (facing) {
-			case "up": return 86;
-			case "down": return 17;
-			case "left": return 40;
-			case "right": return 63;
-		}
-	}
-	
-	private getMagicBallFrame(facing: Facing) {
-		switch (facing) {
-			case "up": return 0;
-			case "down": return 1;
-			case "left": return 2;
-			case "right": return 3;
-		}
-	}
-
-	private fireArrow(rp: RenderPlayer) {
-		if (!this.map || !this.tileToWorldFeet) return;
-
-		const arrow = this.add.sprite(
-			rp.sprite.x,
-			rp.sprite.y,
-			"arrow-projectile",
-			this.getArrowFrame(rp.facing)
-		);
-
-		arrow.setScale(1.75);
-		arrow.setDepth(rp.sprite.depth + 5);
-
-		let dx = 0;
-		let dy = 0;
-
-		// visual spawn offsets
-		let spawnOffsetX = 0;
-		let spawnOffsetY = 0;
-
-		switch (rp.facing) {
-			case "right":
-				dx = 1;
-				spawnOffsetX = 10;
-				spawnOffsetY = -40;
-				break;
-			case "left":
-				dx = -1;
-				spawnOffsetX = -10;
-				spawnOffsetY = -40;
-				break;
-			case "up":
-				dy = -1;
-				spawnOffsetX = 0;
-				spawnOffsetY = -52;
-				break;
-			case "down":
-				dy = 1;
-				spawnOffsetX = 0;
-				spawnOffsetY = -28;
-				break;
-		}
-
-		arrow.x += spawnOffsetX;
-		arrow.y += spawnOffsetY;
-
-		// Start from the player's current tile and march outward
-		let testTx = rp.tx;
-		let testTy = rp.ty;
-
-		let lastOpenTx = rp.tx;
-		let lastOpenTy = rp.ty;
-
-		while (true) {
-			const nextTx = testTx + dx;
-			const nextTy = testTy + dy;
-
-			if (this.isBlocked(nextTx, nextTy, this.map)) {
-				break;
-			}
-
-			lastOpenTx = nextTx;
-			lastOpenTy = nextTy;
-			testTx = nextTx;
-			testTy = nextTy;
-		}
-
-		// If no open tile ahead, destroy immediately
-		if (lastOpenTx === rp.tx && lastOpenTy === rp.ty) {
-			arrow.destroy();
-			return;
-		}
-
-		const targetFeet = this.tileToWorldFeet(lastOpenTx, lastOpenTy);
-
-		// Match the same visual offset at the destination
-		const targetX = targetFeet.x + spawnOffsetX;
-		const targetY = (targetFeet.y - this.playerFeetOffset) + spawnOffsetY;
-
-		const distancePx = Phaser.Math.Distance.Between(arrow.x, arrow.y, targetX, targetY);
-		const projectileSpeed = 320; // pixels per second
-		const duration = (distancePx / projectileSpeed) * 1000;
-
-		this.tweens.add({
-			targets: arrow,
-			x: targetX,
-			y: targetY,
-			duration,
-			onComplete: () => {
-				arrow.destroy();
+		return {
+			map: this.map,
+			blocked: this.blocked,
+			tileToWorldFeet: this.tileToWorldFeet,
+			playerFeetOffset: this.playerFeetOffset,
+			moveRenderMs: this.moveRenderMs,
+			lastMoveTime: this.lastMoveTime,
+			moveIntervalMs: this.moveIntervalMs,
+			roomSessionId: this.room.sessionId,
+			sendMove: (dx: number, dy: number, seq: number) => {
+				this.room.send("move", { dx, dy, seq });
 			},
-		});
-	}
-
-	private fireMagicBall(rp: RenderPlayer) {
-		if (!this.map || !this.tileToWorldFeet) return;
-
-		const ball = this.add.sprite(
-			rp.sprite.x,
-			rp.sprite.y,
-			"magic-ball-projectile",
-			this.getMagicBallFrame(rp.facing)
-		);
-
-		ball.setScale(1.2);
-		ball.setDepth(rp.sprite.depth + 5);
-
-		let dx = 0;
-		let dy = 0;
-
-		let spawnOffsetX = 0;
-		let spawnOffsetY = 0;
-
-		switch (rp.facing) {
-			case "right":
-				dx = 1;
-				spawnOffsetX = 16;
-				spawnOffsetY = -46;
-				break;
-			case "left":
-				dx = -1;
-				spawnOffsetX = -16;
-				spawnOffsetY = -46;
-				break;
-			case "up":
-				dy = -1;
-				spawnOffsetX = 0;
-				spawnOffsetY = -70;
-				break;
-			case "down":
-				dy = 1;
-				spawnOffsetX = 0;
-				spawnOffsetY = -28;
-				break;
-		}
-
-		ball.x += spawnOffsetX;
-		ball.y += spawnOffsetY;
-
-		let testTx = rp.tx;
-		let testTy = rp.ty;
-
-		let lastOpenTx = rp.tx;
-		let lastOpenTy = rp.ty;
-
-		while (true) {
-			const nextTx = testTx + dx;
-			const nextTy = testTy + dy;
-
-			if (this.isBlocked(nextTx, nextTy, this.map)) {
-				break;
-			}
-
-			lastOpenTx = nextTx;
-			lastOpenTy = nextTy;
-			testTx = nextTx;
-			testTy = nextTy;
-		}
-
-		if (lastOpenTx === rp.tx && lastOpenTy === rp.ty) {
-			ball.destroy();
-			return;
-		}
-
-		const targetFeet = this.tileToWorldFeet(lastOpenTx, lastOpenTy);
-		const targetX = targetFeet.x + spawnOffsetX;
-		const targetY = (targetFeet.y - this.playerFeetOffset) + spawnOffsetY;
-
-		const distancePx = Phaser.Math.Distance.Between(ball.x, ball.y, targetX, targetY);
-		const projectileSpeed = 260;
-		const duration = (distancePx / projectileSpeed) * 1000;
-
-		this.tweens.add({
-			targets: ball,
-			x: targetX,
-			y: targetY,
-			duration,
-			onComplete: () => {
-				ball.destroy();
-			},
-		});
-	}
-
-	private getSpriteKeyForClass(cls: unknown) {
-		const normalized = this.normalizePlayerClass(cls);
-
-		if (normalized === "bow") return "player-bow-class";
-		if (normalized === "magic") return "player-magic-class";
-		return "player-sword-class";
-	}
-
-	private setAnimState(rp: RenderPlayer, nextState: AnimState) {
-		if (rp.animState === nextState) {
-			if (nextState === "walk") {
-				rp.sprite.play(this.getWalkAnimKey(rp.className, rp.facing), true);
-			} else if (nextState === "attack") {
-				rp.sprite.play(this.getAttackAnimKey(rp.className, rp.facing), true);
-			}
-			return;
-		}
-
-		rp.animState = nextState;
-
-		if (nextState === "walk") {
-			rp.sprite.play(this.getWalkAnimKey(rp.className, rp.facing), true);
-			return;
-		}
-
-		if (nextState === "attack") {
-			rp.sprite.play(this.getAttackAnimKey(rp.className, rp.facing), true);
-			return;
-		}
-
-		rp.sprite.anims.stop();
-		rp.sprite.setFrame(this.animDef.idleWalk[rp.facing].idle);
-	}
-
-		private getAttackDurationMs(rp: RenderPlayer) {
-		if (rp.className === "bow") return 220;
-		if (rp.className === "magic") return 260;
-		return 180; // sword
-	}
-
-	private tryStartLocalAttack(now: number) {
-		const meRp = this.renderPlayers.get(this.room.sessionId);
-		if (!meRp) return false;
-		if (meRp.isMoving) return false;
-		if (meRp.isAttacking) return false;
-
-		meRp.isAttacking = true;
-		meRp.attackEndTime = now + this.getAttackDurationMs(meRp);
-		meRp.queuedMove = null;
-
-		this.setAnimState(meRp, "attack");
-
-		if (meRp.className === "bow") {
-			this.fireArrow(meRp);
-		} else if (meRp.className === "magic") {
-			this.fireMagicBall(meRp);
-		}
-
-		// Optional later:
-		// this.room.send("attack", { facing: meRp.facing, class: meRp.className });
-
-		return true;
-	}
-
-	private advanceAttackState(rp: RenderPlayer, now: number) {
-		if (!rp.isAttacking) return;
-		if (now < rp.attackEndTime) return;
-
-		rp.isAttacking = false;
-		this.setAnimState(rp, "idle");
-	}
-
-	private beginRenderMove(
-		rp: RenderPlayer,
-		targetTx: number,
-		targetTy: number,
-		now: number,
-		duration: number,
-		facing: Facing
-	) {
-		if (!this.tileToWorldFeet) return;
-
-		const targetFeet = this.tileToWorldFeet(targetTx, targetTy);
-		const targetSpriteY = targetFeet.y - this.playerFeetOffset;
-
-		rp.fromX = rp.sprite.x;
-		rp.fromY = rp.sprite.y;
-		rp.toX = targetFeet.x;
-		rp.toY = targetSpriteY;
-		rp.moveStartTime = now;
-		rp.moveDuration = duration;
-		rp.isMoving = true;
-		rp.facing = facing;
-
-		this.setAnimState(rp, "walk");
-	}
-
-	private advanceRenderMove(rp: RenderPlayer, now: number) {
-		if (!rp.isMoving) return;
-
-		const t = Phaser.Math.Clamp(
-			(now - rp.moveStartTime) / rp.moveDuration,
-			0,
-			1
-		);
-
-		rp.sprite.x = Phaser.Math.Linear(rp.fromX, rp.toX, t);
-		rp.sprite.y = Phaser.Math.Linear(rp.fromY, rp.toY, t);
-		rp.sprite.setDepth(rp.sprite.y + this.playerFeetOffset);
-
-		this.syncLabel(rp);
-
-		if (t >= 1) {
-			rp.sprite.x = rp.toX;
-			rp.sprite.y = rp.toY;
-			rp.sprite.setDepth(rp.sprite.y + this.playerFeetOffset);
-
-			rp.isMoving = false;
-			this.setAnimState(rp, "idle");
-			this.syncLabel(rp);
-		}
-	}
-
-	private getFacingFromDelta(dx: number, dy: number): Facing {
-		if (dx < 0) return "left";
-		if (dx > 0) return "right";
-		if (dy < 0) return "up";
-		return "down";
-	}
-
-	private snapRenderPlayerToTile(rp: RenderPlayer, tx: number, ty: number) {
-		if (!this.tileToWorldFeet) return;
-
-		const pos = this.tileToWorldFeet(tx, ty);
-		const spriteY = pos.y - this.playerFeetOffset;
-
-		rp.sprite.setPosition(pos.x, spriteY);
-		rp.sprite.setDepth(pos.y);
-
-		rp.fromX = pos.x;
-		rp.fromY = spriteY;
-		rp.toX = pos.x;
-		rp.toY = spriteY;
-		rp.isMoving = false;
-	}
-
-	private reconcileLocalPlayer(rp: RenderPlayer, player: any) {
-		const serverTx = player.tx as number;
-		const serverTy = player.ty as number;
-		const lastProcessedInput = Number(player.lastProcessedInput ?? 0);
-
-		// Drop inputs the server has already processed.
-		rp.pendingInputs = rp.pendingInputs.filter((input) => input.seq > lastProcessedInput);
-
-		// Rebuild the predicted logical tile from the server position + remaining inputs.
-		let correctedTx = serverTx;
-		let correctedTy = serverTy;
-		let replayFacing = rp.facing;
-
-		for (const input of rp.pendingInputs) {
-			const ntx = correctedTx + input.dx;
-			const nty = correctedTy + input.dy;
-
-			if (!this.map || this.isBlocked(ntx, nty, this.map)) {
-				continue;
-			}
-
-			correctedTx = ntx;
-			correctedTy = nty;
-			replayFacing = this.getFacingFromDelta(input.dx, input.dy);
-		}
-
-		const needsLogicalCorrection = rp.tx !== correctedTx || rp.ty !== correctedTy;
-
-		// Update logical tile no matter what.
-		rp.tx = correctedTx;
-		rp.ty = correctedTy;
-
-		// If there is no mismatch, do NOT snap or restart movement.
-		if (!needsLogicalCorrection) {
-			this.syncLabel(rp, player.name ?? "Player");
-			return;
-		}
-
-		// Only do a visual correction when prediction truly diverged.
-		this.snapRenderPlayerToTile(rp, serverTx, serverTy);
-
-		if (rp.pendingInputs.length > 0) {
-			this.beginRenderMove(rp, correctedTx, correctedTy, this.time.now, this.moveRenderMs, replayFacing);
-		} else {
-			this.setAnimState(rp, "idle");
-			this.syncLabel(rp, player.name ?? "Player");
-		}
-	}
-
-	private getDesiredInputDirection(): QueuedMove | null {
-		let dx = 0;
-		let dy = 0;
-
-		if (this.moveKeys.left.isDown) dx = -1;
-		else if (this.moveKeys.right.isDown) dx = 1;
-		else if (this.moveKeys.up.isDown) dy = -1;
-		else if (this.moveKeys.down.isDown) dy = 1;
-		else return null;
-
-		return { dx, dy };
-	}
-
-	private tryStartPredictedLocalMove(dx: number, dy: number, now: number) {
-		if (!this.map) return false;
-
-		const meRp = this.renderPlayers.get(this.room.sessionId);
-		if (!meRp) return false;
-
-		const ntx = meRp.tx + dx;
-		const nty = meRp.ty + dy;
-
-		if (this.isBlocked(ntx, nty, this.map)) return false;
-
-		const facing = this.getFacingFromDelta(dx, dy);
-		const seq = ++meRp.nextInputSeq;
-
-		meRp.pendingInputs.push({ seq, dx, dy });
-
-		meRp.tx = ntx;
-		meRp.ty = nty;
-
-		this.beginRenderMove(meRp, ntx, nty, now, this.moveRenderMs, facing);
-
-		meRp.queuedMove = null;
-		this.lastMoveTime = now;
-		this.room.send("move", { dx, dy, seq });
-		return true;
-	}
-
-	private tryConsumeQueuedLocalMove(now: number) {
-		const meRp = this.renderPlayers.get(this.room.sessionId);
-		if (!meRp) return false;
-		if (meRp.isMoving) return false;
-		if (!meRp.queuedMove) return false;
-		if (now - this.lastMoveTime < this.moveIntervalMs) return false;
-
-		const { dx, dy } = meRp.queuedMove;
-		return this.tryStartPredictedLocalMove(dx, dy, now);
+		};
 	}
 
 	create() {
+		this.renderPlayers.clear();
+		this.renderEnemies.clear();
+		this.blocked.clear();
+		this.lastMoveTime = 0;
+
 		const map = this.make.tilemap({ key: "arena-map" });
 
 		this.moveRenderMs = 160;
@@ -660,7 +125,7 @@ export default class ArenaScene extends Phaser.Scene {
 			Phaser.Input.Keyboard.KeyCodes.SPACE
 		);
 
-		this.buildBlockedGrid(map);
+		buildBlockedGrid(map, this.blocked);
 
 		const offsetX = Math.round((this.cameras.main.width - map.widthInPixels) / 2);
 		const offsetY = Math.round((this.cameras.main.height - map.heightInPixels) / 2);
@@ -738,72 +203,32 @@ export default class ArenaScene extends Phaser.Scene {
 		this.playerListHud.setDepth(9999);
 
 		const players = (this.room.state as any).players;
+		const enemies = (this.room.state as any).enemies;
 		if (!players) {
 			console.warn("Room state has no players map yet.");
 			return;
 		}
 
-		const ensurePlayerAnimations = () => {
-			const makeWalk = (
-				className: "sword" | "bow" | "magic",
-				facing: Facing,
-				frames: readonly number[]
-			) => {
-				const key = this.getWalkAnimKey(className, facing);
-				if (this.anims.exists(key)) return;
-
-				this.anims.create({
-					key,
-					frames: frames.map((frame) => ({
-						key: this.getSpriteKeyForClass(className),
-						frame,
-					})),
-					frameRate: WALK_FPS,
-					repeat: -1,
-				});
-			};
-
-			const makeAttack = (
-				className: "sword" | "bow" | "magic",
-				facing: Facing,
-				frames: readonly number[]
-			) => {
-				const key = this.getAttackAnimKey(className, facing);
-				if (this.anims.exists(key)) return;
-
-				this.anims.create({
-					key,
-					frames: frames.map((frame) => ({
-						key: this.getSpriteKeyForClass(className),
-						frame,
-					})),
-					frameRate: 12,
-					repeat: 0,
-				});
-			};
-
-			const classes: Array<"sword" | "bow" | "magic"> = ["sword", "bow", "magic"];
-
-			for (const cls of classes) {
-				makeWalk(cls, "down", this.animDef.idleWalk.down.walk);
-				makeWalk(cls, "left", this.animDef.idleWalk.left.walk);
-				makeWalk(cls, "right", this.animDef.idleWalk.right.walk);
-				makeWalk(cls, "up", this.animDef.idleWalk.up.walk);
-
-				makeAttack(cls, "down", this.animDef.attack[cls].down);
-				makeAttack(cls, "left", this.animDef.attack[cls].left);
-				makeAttack(cls, "right", this.animDef.attack[cls].right);
-				makeAttack(cls, "up", this.animDef.attack[cls].up);
-			}
-		};
-
-		ensurePlayerAnimations();
+		ensurePlayerAnimations(this, getSpriteKeyForClass, WALK_FPS);
+		ensureEnemyAnimations(this, WALK_FPS);
 
 		const syncToAuthoritativeState = (rp: RenderPlayer, player: any) => {
 			const isLocal = rp.sessionId === this.room.sessionId;
 
 			if (isLocal) {
-				this.reconcileLocalPlayer(rp, player);
+				const moveCtx = this.getMovementContext();
+				if (!moveCtx) return;
+
+				reconcileLocalPlayer(
+					rp,
+					player,
+					moveCtx,
+					{
+						setAnimState,
+						syncLabel: (targetRp, name) => syncLabel(targetRp, this.nameYOffset, name),
+					},
+					this.time.now
+				);
 				return;
 			}
 
@@ -821,16 +246,16 @@ export default class ArenaScene extends Phaser.Scene {
 
 					rp.sprite.setPosition(pos.x, spriteY);
 					rp.sprite.setDepth(pos.y);
-					this.setAnimState(rp, "idle");
+					setAnimState(rp, "idle");
 				}
 
-				this.syncLabel(rp, player.name ?? "Player");
+				syncLabel(rp, this.nameYOffset, player.name ?? "Player")
 				return;
 			}
 
 			const dx = nextTx - prevTx;
 			const dy = nextTy - prevTy;
-			const facing = this.getFacingFromDelta(dx, dy);
+			const facing = getFacingFromDelta(dx, dy);
 
 			const targetFeet = this.tileToWorldFeet!(nextTx, nextTy);
 			const targetSpriteY = targetFeet.y - this.playerFeetOffset;
@@ -841,74 +266,28 @@ export default class ArenaScene extends Phaser.Scene {
 				rp.toY === targetSpriteY;
 
 			if (!alreadyMovingToSameTarget) {
-				this.beginRenderMove(rp, nextTx, nextTy, this.time.now, this.moveRenderMs, facing);
+				if (!this.tileToWorldFeet) return;
+
+				beginRenderMove(
+					rp,
+					nextTx,
+					nextTy,
+					this.time.now,
+					this.moveRenderMs,
+					facing,
+					this.tileToWorldFeet,
+					this.playerFeetOffset,
+					setAnimState
+				);
 			} else {
 				rp.facing = facing;
-				this.setAnimState(rp, "walk");
+				setAnimState(rp, "walk");
 			}
 
-			this.syncLabel(rp, player.name ?? "Player");
+			syncLabel(rp, player.name ?? "Player");
 
 			rp.tx = nextTx;
 			rp.ty = nextTy;
-		};
-
-		const spawnPlayerSprite = (player: any, sessionId: string) => {
-			if (this.renderPlayers.has(sessionId)) return;
-
-			const pos = this.tileToWorldFeet!(player.tx, player.ty);
-			const spriteY = pos.y - this.playerFeetOffset;
-
-			const className = this.normalizePlayerClass(player.class);
-			const spriteKey = this.getSpriteKeyForClass(className);
-
-			const sprite = this.add
-				.sprite(pos.x, spriteY, spriteKey, this.animDef.idleWalk.down.idle)
-				.setOrigin(0.5, 1)
-				.setScale(PLAYER_SCALE);
-
-			sprite.setDepth(pos.y);
-
-			const label = this.add
-				.text(pos.x, spriteY - this.nameYOffset, player.name ?? "Player", {
-					fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
-					fontSize: "12px",
-					color: "#ffffff",
-				})
-				.setOrigin(0.5, 0.5)
-				.setDepth(pos.y + 1);
-
-			const rp: RenderPlayer = {
-				sessionId,
-				sprite,
-				label,
-				className,
-
-				tx: player.tx,
-				ty: player.ty,
-
-				fromX: sprite.x,
-				fromY: sprite.y,
-				toX: sprite.x,
-				toY: sprite.y,
-
-				moveStartTime: 0,
-				moveDuration: this.moveRenderMs,
-				isMoving: false,
-
-				facing: "down",
-				animState: "idle",
-
-				pendingInputs: [],
-				nextInputSeq: 0,
-				queuedMove: null,
-
-				attackEndTime: 0,
-				isAttacking: false,
-			};
-
-			this.syncLabel(rp, player.name ?? "Player");
-			this.renderPlayers.set(sessionId, rp);
 		};
 
 		const renderPlayerList = () => {
@@ -927,7 +306,18 @@ export default class ArenaScene extends Phaser.Scene {
 			this.playerListHud?.setText(["Players:", ...(lines.length ? lines : ["-"])].join("\n"));
 		};
 
-		players.forEach((p: any, sid: string) => spawnPlayerSprite(p, sid));
+		players.forEach((p: any, sid: string) =>
+			spawnPlayerSprite(
+				this,
+				this.renderPlayers,
+				p,
+				sid,
+				this.tileToWorldFeet!,
+				this.playerFeetOffset,
+				this.nameYOffset,
+				PLAYER_SCALE
+			)
+		);
 		players.forEach((p: any, sid: string) => {
 			const rp = this.renderPlayers.get(sid);
 			if (!rp) return;
@@ -935,10 +325,74 @@ export default class ArenaScene extends Phaser.Scene {
 		});
 		renderPlayerList();
 
+		if (enemies) {
+			enemies.forEach((e: any, enemyId: string) => {
+				spawnEnemySprite(
+					this,
+					this.renderEnemies,
+					e,
+					enemyId,
+					this.tileToWorldFeet!,
+					this.playerFeetOffset,
+					PLAYER_SCALE
+				);
+			});
+
+			enemies.forEach((e: any, enemyId: string) => {
+				const re = this.renderEnemies.get(enemyId);
+				if (!re) return;
+				syncEnemyToAuthoritativeState(
+					re,
+					e,
+					this.tileToWorldFeet!,
+					this.playerFeetOffset,
+					this.time.now,
+					this.moveRenderMs
+				);
+			});
+
+			enemies.onAdd = (enemy: any, enemyId: string) => {
+				spawnEnemySprite(
+					this,
+					this.renderEnemies,
+					enemy,
+					enemyId,
+					this.tileToWorldFeet!,
+					this.playerFeetOffset,
+					PLAYER_SCALE
+				);
+
+				const re = this.renderEnemies.get(enemyId);
+				if (!re) return;
+
+				syncEnemyToAuthoritativeState(
+					re,
+					enemy,
+					this.tileToWorldFeet!,
+					this.playerFeetOffset,
+					this.time.now,
+					this.moveRenderMs
+				);
+			};
+
+			enemies.onRemove = (_enemy: any, enemyId: string) => {
+				removeEnemySprite(this.renderEnemies, enemyId);
+			};
+		}
+
 		const onState = () => {
 			players.forEach((p: any, sid: string) => {
 				if (!this.renderPlayers.has(sid)) {
-					spawnPlayerSprite(p, sid);
+					spawnPlayerSprite(
+						this,
+						this.renderPlayers,
+						p,
+						sid,
+						this.tileToWorldFeet!,
+						this.playerFeetOffset,
+						this.nameYOffset,
+						PLAYER_SCALE
+					);
 				}
 
 				const rp = this.renderPlayers.get(sid);
@@ -948,23 +402,57 @@ export default class ArenaScene extends Phaser.Scene {
 			});
 
 			renderPlayerList();
+
+			if (enemies) {
+				enemies.forEach((e: any, enemyId: string) => {
+					if (!this.renderEnemies.has(enemyId)) {
+						spawnEnemySprite(
+							this,
+							this.renderEnemies,
+							e,
+							enemyId,
+							this.tileToWorldFeet!,
+							this.playerFeetOffset,
+							PLAYER_SCALE
+						);
+					}
+
+					const re = this.renderEnemies.get(enemyId);
+					if (!re) return;
+
+					syncEnemyToAuthoritativeState(
+						re,
+						e,
+						this.tileToWorldFeet!,
+						this.playerFeetOffset,
+						this.time.now,
+						this.moveRenderMs
+					);
+				});
+			}
 		};
 
 		const unsubscribeState = this.room.onStateChange(onState);
 
-		this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+				this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
 			try {
 				(unsubscribeState as any)?.();
 			} catch {}
+
+			for (const sessionId of this.renderPlayers.keys()) {
+				removePlayerSprite(this.renderPlayers, sessionId);
+			}
+
+			for (const re of this.renderEnemies.values()) {
+				re.sprite.destroy();
+			}
+			this.renderEnemies.clear();
+
+			this.blocked.clear();
 		});
 
 		players.onRemove = (_player: any, sessionId: string) => {
-			const rp = this.renderPlayers.get(sessionId);
-			if (rp) {
-				rp.label.destroy();
-				rp.sprite.destroy();
-				this.renderPlayers.delete(sessionId);
-			}
+			removePlayerSprite(this.renderPlayers, sessionId);
 			renderPlayerList();
 		};
 
@@ -986,17 +474,34 @@ export default class ArenaScene extends Phaser.Scene {
 
 		// Advance all render interpolation and attack timers
 		for (const rp of this.renderPlayers.values()) {
-			this.advanceRenderMove(rp, now);
-			this.advanceAttackState(rp, now);
+			advanceRenderMove(
+				rp,
+				now,
+				this.playerFeetOffset,
+				setAnimState,
+				(targetRp, name) => syncLabel(targetRp, this.nameYOffset, name)
+			);
+			advanceAttackState(rp, now);
 
 			if (!rp.isMoving && !rp.isAttacking) {
-				this.syncLabel(rp);
+				syncLabel(rp, this.nameYOffset)
 			}
 		}
 
 		// Start attack on SPACE press
 		if (Phaser.Input.Keyboard.JustDown(this.attackKey)) {
-			if (this.tryStartLocalAttack(now)) {
+			const projectileCtx =
+				this.map && this.tileToWorldFeet
+					? {
+							scene: this,
+							map: this.map,
+							blocked: this.blocked,
+							tileToWorldFeet: this.tileToWorldFeet,
+							playerFeetOffset: this.playerFeetOffset,
+					  }
+					: null;
+
+			if (tryStartLocalAttack(meRp, now, projectileCtx)) {
 				return;
 			}
 		}
@@ -1007,7 +512,11 @@ export default class ArenaScene extends Phaser.Scene {
 			return;
 		}
 
-		const desired = this.getDesiredInputDirection();
+		for (const re of this.renderEnemies.values()) {
+			advanceEnemyRenderMove(re, now, this.playerFeetOffset);
+		}
+
+		const desired = getDesiredInputDirection(this.moveKeys);
 
 		// If local player is currently moving, buffer the latest desired direction.
 		if (meRp?.isMoving) {
@@ -1016,8 +525,20 @@ export default class ArenaScene extends Phaser.Scene {
 		}
 
 		// If a move is queued, try to consume it first as soon as movement/cooldown allows.
-		if (this.tryConsumeQueuedLocalMove(now)) {
-			return;
+		{
+			const moveCtx = this.getMovementContext();
+			if (
+				moveCtx &&
+				tryConsumeQueuedLocalMove(
+					meRp,
+					now,
+					moveCtx,
+					setAnimState
+				)
+			) {
+				this.lastMoveTime = now;
+				return;
+			}
 		}
 
 		if (now - this.lastMoveTime < this.moveIntervalMs) {
@@ -1029,6 +550,21 @@ export default class ArenaScene extends Phaser.Scene {
 
 		if (!desired) return;
 
-		this.tryStartPredictedLocalMove(desired.dx, desired.dy, now);
+				{
+			const moveCtx = this.getMovementContext();
+			if (
+				moveCtx &&
+				tryStartPredictedLocalMove(
+					meRp,
+					desired.dx,
+					desired.dy,
+					now,
+					moveCtx,
+					setAnimState
+				)
+			) {
+				this.lastMoveTime = now;
+			}
+		}
 	}
 }

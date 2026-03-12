@@ -51,14 +51,19 @@ export default class BootScene extends Phaser.Scene {
 			frameHeight: 48,
 		});
 
-		this.load.spritesheet("arrow-projectile", "assets/arrow.png", {
+		this.load.spritesheet("arrow-projectile", "/assets/arrow.png", {
 			frameWidth: 48,
 			frameHeight: 48,
 		});
 
-		this.load.spritesheet("magic-ball-projectile", "assets/magic.png", {
+		this.load.spritesheet("magic-ball-projectile", "/assets/magic.png", {
 			frameWidth: 32,
 			frameHeight: 32,
+		});
+
+		this.load.spritesheet("orc-enemy", "/assets/orc-sprite.png", {
+			frameWidth: 48,
+			frameHeight: 48,
 		});
 	}
 
