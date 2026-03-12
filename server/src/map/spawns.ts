@@ -36,7 +36,7 @@ export function loadSpawnPointsFromTiledJson(opts: {
 		.filter((obj: any) => obj.point)
 		.map((obj: any) => {
 			const tx = Math.floor((obj.x ?? 0) / map.tilewidth);
-			const ty = Math.floor((obj.y ?? 0) / map.tileheight);
+			const ty = Math.floor((obj.y ?? 0) / map.tileheight) + 1;
 
 			return {
 				tx,

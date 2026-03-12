@@ -31,13 +31,14 @@ export default class HubScene extends Phaser.Scene {
     this.load.html("hub-ui", "/ui/hub.html");
   }
 
-  create() {
+  async create() {
+    await auth.restore();
+
     if (!auth.user) {
       this.scene.start("auth");
       return;
     }
 
-    // colyseus auth will happen via cookie during websocket upgrade
     this.client = new Client(getWsUrl());
 
     this.uiRoot = this.add
