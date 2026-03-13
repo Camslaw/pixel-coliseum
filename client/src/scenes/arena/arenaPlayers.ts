@@ -1,7 +1,6 @@
 import Phaser from "phaser";
 import type { AnimState, RenderPlayer } from "./arenaTypes";
 import { animDef, getWalkAnimKey, getAttackAnimKey } from "./arenaAnimations";
-import { fireArrow, fireMagicBall } from "./arenaProjectiles";
 
 type TileToWorldFeet = (tx: number, ty: number) => { x: number; y: number };
 
@@ -43,9 +42,17 @@ export function setAnimState(rp: RenderPlayer, nextState: AnimState) {
 	if (rp.animState === nextState) {
 		if (nextState === "walk") {
 			rp.sprite.play(getWalkAnimKey(rp.className, rp.facing), true);
-		} else if (nextState === "attack") {
-			rp.sprite.play(getAttackAnimKey(rp.className, rp.facing), true);
+			return;
 		}
+
+		if (nextState === "attack") {
+			rp.sprite.play(getAttackAnimKey(rp.className, rp.facing), true);
+			return;
+		}
+
+		// idle + facing changed => update frame immediately
+		rp.sprite.anims.stop();
+		rp.sprite.setFrame(animDef.idleWalk[rp.facing].idle);
 		return;
 	}
 
@@ -74,7 +81,8 @@ export function getAttackDurationMs(rp: RenderPlayer) {
 export function tryStartLocalAttack(
 	meRp: RenderPlayer | undefined,
 	now: number,
-	projectileCtx: ProjectileContext | null
+	_onProjectileCtx: ProjectileContext | null,
+	onAttackStarted?: (facing: "up" | "down" | "left" | "right") => void
 ) {
 	if (!meRp) return false;
 	if (meRp.isMoving) return false;
@@ -85,14 +93,7 @@ export function tryStartLocalAttack(
 	meRp.queuedMove = null;
 
 	setAnimState(meRp, "attack");
-
-	if (projectileCtx) {
-		if (meRp.className === "bow") {
-			fireArrow(projectileCtx, meRp);
-		} else if (meRp.className === "magic") {
-			fireMagicBall(projectileCtx, meRp);
-		}
-	}
+	onAttackStarted?.(meRp.facing);
 
 	return true;
 }

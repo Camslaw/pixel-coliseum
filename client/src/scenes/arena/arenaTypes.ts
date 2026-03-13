@@ -57,4 +57,11 @@ export type RenderEnemy = {
 	isMoving: boolean;
 	facing: Facing;
 	animState: AnimState;
+
+	hp: number;
+	maxHp: number;
+
+	healthBarBg: Phaser.GameObjects.Graphics;
+	healthBarFill: Phaser.GameObjects.Graphics;
+	lastRenderedHp: number;
 };

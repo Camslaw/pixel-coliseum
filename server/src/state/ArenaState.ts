@@ -8,6 +8,8 @@ export class Player extends Schema {
 	@type("number") tx = 0;
 	@type("number") ty = 0;
 
+	@type("string") facing = "down";
+
 	@type("number") lastProcessedInput = 0;
 	@type("number") spawnIndex = -1;
 }
@@ -23,6 +25,10 @@ export class Enemy extends Schema {
 	@type("string") animState = "idle";
 
 	@type("boolean") alive = true;
+	@type("number") lastAttackAt = 0;
+
+	@type("number") hp = 100;
+	@type("number") maxHp = 100;
 }
 
 export class ArenaState extends Schema {
@@ -30,5 +36,5 @@ export class ArenaState extends Schema {
 	@type({ map: Enemy }) enemies = new MapSchema<Enemy>();
 
 	@type("string") hostId = "";
-	@type("string") phase = "lobby";
+	@type("string") phase = "lobby"; // lobby -> starting -> playing -> cleared
 }

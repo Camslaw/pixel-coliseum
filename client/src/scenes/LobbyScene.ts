@@ -23,6 +23,19 @@ export default class LobbyScene extends Phaser.Scene {
   create() {
     let enteredArena = false;
 
+    const recenter = () => {
+      this.uiRoot?.updateSize();
+      this.uiRoot?.setPosition(this.cameras.main.centerX, this.cameras.main.centerY);
+    };
+
+    const cleanup = () => {
+      const r: any = this.room;
+      r.off?.("statechange", onStateChange);
+      r.removeListener?.("statechange", onStateChange);
+
+      this.scale.off("resize", recenter);
+    };
+
     const onStateChange = () => {
       renderLobbyUI();
       renderPlayers();
@@ -31,8 +44,7 @@ export default class LobbyScene extends Phaser.Scene {
 
       const phase = (this.room.state as any).phase as string;
 
-      // only run this transition once
-      if (phase === "playing" && !enteredArena) {
+      if ((phase === "starting" || phase === "playing") && !enteredArena) {
         enteredArena = true;
 
         cleanup();
@@ -45,18 +57,8 @@ export default class LobbyScene extends Phaser.Scene {
       }
     };
 
-    const cleanup = () => {
-      const r: any = this.room;
-      r.off?.("statechange", onStateChange);
-      r.removeListener?.("statechange", onStateChange);
-
-      this.scale.off("resize", recenter);
-    };
-
-    // attach listener
     this.room.onStateChange(onStateChange);
 
-    // ensure cleanup runs even if you leave or stop the scene in other ways
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, cleanup);
     this.events.once(Phaser.Scenes.Events.DESTROY, cleanup);
 
@@ -125,11 +127,6 @@ export default class LobbyScene extends Phaser.Scene {
       }
     };
 
-    const recenter = () => {
-      this.uiRoot?.updateSize();
-      this.uiRoot?.setPosition(this.cameras.main.centerX, this.cameras.main.centerY);
-    };
-
     this.time.delayedCall(0, recenter);
     this.scale.on("resize", recenter);
 
@@ -164,6 +161,9 @@ export default class LobbyScene extends Phaser.Scene {
           hint.innerText = "Waiting for host to start...";
           startBtn.style.display = "none";
         }
+      } else if (phase === "starting") {
+        hint.innerText = "Round 1 starting...";
+        startBtn.style.display = "none";
       } else if (phase === "playing") {
         hint.innerText = "Starting...";
         startBtn.style.display = "none";

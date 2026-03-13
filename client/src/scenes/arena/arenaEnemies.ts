@@ -8,6 +8,70 @@ import {
 
 type TileToWorldFeet = (tx: number, ty: number) => { x: number; y: number };
 
+const HEALTH_BAR_WIDTH = 30;
+const HEALTH_BAR_HEIGHT = 3;
+const HEALTH_BAR_Y_OFFSET = 80;
+
+function updateEnemyHealthBar(re: RenderEnemy) {
+	const ratio =
+		re.maxHp > 0 ? Phaser.Math.Clamp(re.hp / re.maxHp, 0, 1) : 0;
+
+	const x = re.sprite.x - HEALTH_BAR_WIDTH / 2;
+	const y = re.sprite.y - HEALTH_BAR_Y_OFFSET;
+
+	re.healthBarBg.clear();
+	re.healthBarBg.fillStyle(0x000000, 0.7);
+	re.healthBarBg.fillRect(
+		Math.round(x - 1),
+		Math.round(y - 1),
+		HEALTH_BAR_WIDTH + 2,
+		HEALTH_BAR_HEIGHT + 2
+	);
+	re.healthBarBg.setDepth(re.sprite.depth + 2);
+
+	re.healthBarFill.clear();
+
+	if (ratio > 0) {
+		const fillWidth = Math.round(HEALTH_BAR_WIDTH * ratio);
+		re.healthBarFill.fillStyle(0x45c263, 1);
+		re.healthBarFill.fillRect(
+			Math.round(x),
+			Math.round(y),
+			fillWidth,
+			HEALTH_BAR_HEIGHT
+		);
+	}
+
+	re.healthBarFill.setDepth(re.sprite.depth + 3);
+}
+
+export function spawnDamageNumber(
+	scene: Phaser.Scene,
+	x: number,
+	y: number,
+	amount: number
+) {
+	const text = scene.add
+		.text(x, y, `-${amount}`, {
+			fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
+			fontSize: "18px",
+			color: "#ffeb3b",
+			stroke: "#000000",
+			strokeThickness: 4,
+		})
+		.setOrigin(0.5, 0.5)
+		.setDepth(10001);
+
+	scene.tweens.add({
+		targets: text,
+		y: y - 26,
+		alpha: 0,
+		duration: 550,
+		ease: "Quad.easeOut",
+		onComplete: () => text.destroy(),
+	});
+}
+
 export function setEnemyAnimState(re: RenderEnemy, nextState: AnimState) {
 	if (re.animState === nextState) {
 		if (nextState === "walk") {
@@ -55,6 +119,12 @@ export function spawnEnemySprite(
 
 	sprite.setDepth(pos.y);
 
+	const healthBarBg = scene.add.graphics();
+	const healthBarFill = scene.add.graphics();
+
+	const hp = Number(enemy.hp ?? 100);
+	const maxHp = Number(enemy.maxHp ?? 100);
+
 	const re: RenderEnemy = {
 		id: enemyId,
 		sprite,
@@ -74,9 +144,16 @@ export function spawnEnemySprite(
 
 		facing: (enemy.facing as Facing) ?? "down",
 		animState: (enemy.animState as AnimState) ?? "idle",
+
+		hp,
+		maxHp,
+		healthBarBg,
+		healthBarFill,
+		lastRenderedHp: hp,
 	};
 
 	setEnemyAnimState(re, re.animState);
+	updateEnemyHealthBar(re);
 	renderEnemies.set(enemyId, re);
 }
 
@@ -94,6 +171,8 @@ export function syncEnemyToAuthoritativeState(
 	const nextTy = enemy.ty as number;
 
 	re.facing = (enemy.facing as Facing) ?? re.facing;
+	re.hp = Number(enemy.hp ?? re.hp);
+	re.maxHp = Number(enemy.maxHp ?? re.maxHp);
 
 	const moved = prevTx !== nextTx || prevTy !== nextTy;
 
@@ -109,6 +188,7 @@ export function syncEnemyToAuthoritativeState(
 		setEnemyAnimState(re, (enemy.animState as AnimState) ?? "idle");
 		re.tx = nextTx;
 		re.ty = nextTy;
+		updateEnemyHealthBar(re);
 		return;
 	}
 
@@ -127,6 +207,7 @@ export function syncEnemyToAuthoritativeState(
 	re.ty = nextTy;
 
 	setEnemyAnimState(re, "walk");
+	updateEnemyHealthBar(re);
 }
 
 export function advanceEnemyRenderMove(
@@ -134,7 +215,10 @@ export function advanceEnemyRenderMove(
 	now: number,
 	playerFeetOffset: number
 ) {
-	if (!re.isMoving) return;
+	if (!re.isMoving) {
+		updateEnemyHealthBar(re);
+		return;
+	}
 
 	const t = Phaser.Math.Clamp(
 		(now - re.moveStartTime) / re.moveDuration,
@@ -145,6 +229,7 @@ export function advanceEnemyRenderMove(
 	re.sprite.x = Phaser.Math.Linear(re.fromX, re.toX, t);
 	re.sprite.y = Phaser.Math.Linear(re.fromY, re.toY, t);
 	re.sprite.setDepth(re.sprite.y + playerFeetOffset);
+	updateEnemyHealthBar(re);
 
 	if (t >= 1) {
 		re.sprite.x = re.toX;
@@ -153,6 +238,7 @@ export function advanceEnemyRenderMove(
 
 		re.isMoving = false;
 		setEnemyAnimState(re, "idle");
+		updateEnemyHealthBar(re);
 	}
 }
 
@@ -163,6 +249,8 @@ export function removeEnemySprite(
 	const re = renderEnemies.get(enemyId);
 	if (!re) return;
 
+	re.healthBarBg.destroy();
+	re.healthBarFill.destroy();
 	re.sprite.destroy();
 	renderEnemies.delete(enemyId);
 }

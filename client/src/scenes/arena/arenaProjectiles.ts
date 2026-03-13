@@ -1,16 +1,7 @@
 import Phaser from "phaser";
-import type { Facing, RenderPlayer } from "./arenaTypes";
-import { isBlocked } from "./arenaCollision";
+import type { Facing, RenderEnemy } from "./arenaTypes";
 
 type TileToWorldFeet = (tx: number, ty: number) => { x: number; y: number };
-
-type ProjectileContext = {
-	scene: Phaser.Scene;
-	map: Phaser.Tilemaps.Tilemap;
-	blocked: Set<string>;
-	tileToWorldFeet: TileToWorldFeet;
-	playerFeetOffset: number;
-};
 
 function getArrowFrame(facing: Facing) {
 	switch (facing) {
@@ -38,180 +29,145 @@ function getMagicBallFrame(facing: Facing) {
 	}
 }
 
-export function fireArrow(ctx: ProjectileContext, rp: RenderPlayer) {
-	const { scene, map, blocked, tileToWorldFeet, playerFeetOffset } = ctx;
-
-	const arrow = scene.add.sprite(
-		rp.sprite.x,
-		rp.sprite.y,
-		"arrow-projectile",
-		getArrowFrame(rp.facing)
-	);
-
-	arrow.setScale(1.75);
-	arrow.setDepth(rp.sprite.depth + 5);
-
-	let dx = 0;
-	let dy = 0;
-
-	let spawnOffsetX = 0;
-	let spawnOffsetY = 0;
-
-	switch (rp.facing) {
-		case "right":
-			dx = 1;
-			spawnOffsetX = 10;
-			spawnOffsetY = -40;
-			break;
-		case "left":
-			dx = -1;
-			spawnOffsetX = -10;
-			spawnOffsetY = -40;
-			break;
-		case "up":
-			dy = -1;
-			spawnOffsetX = 0;
-			spawnOffsetY = -52;
-			break;
-		case "down":
-			dy = 1;
-			spawnOffsetX = 0;
-			spawnOffsetY = -28;
-			break;
-	}
-
-	arrow.x += spawnOffsetX;
-	arrow.y += spawnOffsetY;
-
-	let testTx = rp.tx;
-	let testTy = rp.ty;
-
-	let lastOpenTx = rp.tx;
-	let lastOpenTy = rp.ty;
-
-	while (true) {
-		const nextTx = testTx + dx;
-		const nextTy = testTy + dy;
-
-		if (isBlocked(nextTx, nextTy, map, blocked)) {
-			break;
+function getProjectileOffsets(kind: "bow" | "magic", facing: Facing) {
+	if (kind === "bow") {
+		switch (facing) {
+			case "right":
+				return {
+					spawnOffsetX: 10,
+					spawnOffsetY: -40,
+					scale: 1.75,
+					texture: "arrow-projectile",
+					frame: getArrowFrame(facing),
+				};
+			case "left":
+				return {
+					spawnOffsetX: -10,
+					spawnOffsetY: -40,
+					scale: 1.75,
+					texture: "arrow-projectile",
+					frame: getArrowFrame(facing),
+				};
+			case "up":
+				return {
+					spawnOffsetX: 0,
+					spawnOffsetY: -52,
+					scale: 1.75,
+					texture: "arrow-projectile",
+					frame: getArrowFrame(facing),
+				};
+			case "down":
+				return {
+					spawnOffsetX: 0,
+					spawnOffsetY: -28,
+					scale: 1.75,
+					texture: "arrow-projectile",
+					frame: getArrowFrame(facing),
+				};
 		}
-
-		lastOpenTx = nextTx;
-		lastOpenTy = nextTy;
-		testTx = nextTx;
-		testTy = nextTy;
 	}
 
-	if (lastOpenTx === rp.tx && lastOpenTy === rp.ty) {
-		arrow.destroy();
-		return;
+	switch (facing) {
+		case "right":
+			return {
+				spawnOffsetX: 16,
+				spawnOffsetY: -46,
+				scale: 1.2,
+				texture: "magic-ball-projectile",
+				frame: getMagicBallFrame(facing),
+			};
+		case "left":
+			return {
+				spawnOffsetX: -16,
+				spawnOffsetY: -46,
+				scale: 1.2,
+				texture: "magic-ball-projectile",
+				frame: getMagicBallFrame(facing),
+			};
+		case "up":
+			return {
+				spawnOffsetX: 0,
+				spawnOffsetY: -70,
+				scale: 1.2,
+				texture: "magic-ball-projectile",
+				frame: getMagicBallFrame(facing),
+			};
+		case "down":
+			return {
+				spawnOffsetX: 0,
+				spawnOffsetY: -28,
+				scale: 1.2,
+				texture: "magic-ball-projectile",
+				frame: getMagicBallFrame(facing),
+			};
 	}
-
-	const targetFeet = tileToWorldFeet(lastOpenTx, lastOpenTy);
-	const targetX = targetFeet.x + spawnOffsetX;
-	const targetY = targetFeet.y - playerFeetOffset + spawnOffsetY;
-
-	const distancePx = Phaser.Math.Distance.Between(arrow.x, arrow.y, targetX, targetY);
-	const projectileSpeed = 320;
-	const duration = (distancePx / projectileSpeed) * 1000;
-
-	scene.tweens.add({
-		targets: arrow,
-		x: targetX,
-		y: targetY,
-		duration,
-		onComplete: () => {
-			arrow.destroy();
-		},
-	});
 }
 
-export function fireMagicBall(ctx: ProjectileContext, rp: RenderPlayer) {
-	const { scene, map, blocked, tileToWorldFeet, playerFeetOffset } = ctx;
+export function playRemoteProjectile(opts: {
+	scene: Phaser.Scene;
+	kind: "bow" | "magic";
+	facing: Facing;
+	fromTx: number;
+	fromTy: number;
+	toTx: number;
+	toTy: number;
+	tileToWorldFeet: TileToWorldFeet;
+	playerFeetOffset: number;
+	durationMs: number;
+	targetEnemy?: RenderEnemy;
+}) {
+	const {
+		scene,
+		kind,
+		facing,
+		fromTx,
+		fromTy,
+		toTx,
+		toTy,
+		tileToWorldFeet,
+		playerFeetOffset,
+		durationMs,
+		targetEnemy,
+	} = opts;
 
-	const ball = scene.add.sprite(
-		rp.sprite.x,
-		rp.sprite.y,
-		"magic-ball-projectile",
-		getMagicBallFrame(rp.facing)
-	);
+	const cfg = getProjectileOffsets(kind, facing);
 
-	ball.setScale(1.2);
-	ball.setDepth(rp.sprite.depth + 5);
+	const fromFeet = tileToWorldFeet(fromTx, fromTy);
+	const toFeet = tileToWorldFeet(toTx, toTy);
 
-	let dx = 0;
-	let dy = 0;
+	const startX = fromFeet.x + cfg.spawnOffsetX;
+	const startY = fromFeet.y - playerFeetOffset + cfg.spawnOffsetY;
 
-	let spawnOffsetX = 0;
-	let spawnOffsetY = 0;
+	const defaultTargetX = toFeet.x + cfg.spawnOffsetX;
+	const defaultTargetY = toFeet.y - playerFeetOffset + cfg.spawnOffsetY;
 
-	switch (rp.facing) {
-		case "right":
-			dx = 1;
-			spawnOffsetX = 16;
-			spawnOffsetY = -46;
-			break;
-		case "left":
-			dx = -1;
-			spawnOffsetX = -16;
-			spawnOffsetY = -46;
-			break;
-		case "up":
-			dy = -1;
-			spawnOffsetX = 0;
-			spawnOffsetY = -70;
-			break;
-		case "down":
-			dy = 1;
-			spawnOffsetX = 0;
-			spawnOffsetY = -28;
-			break;
-	}
+	const projectile = scene.add.sprite(startX, startY, cfg.texture, cfg.frame);
+	projectile.setScale(cfg.scale);
+	projectile.setDepth(startY + playerFeetOffset + 20);
 
-	ball.x += spawnOffsetX;
-	ball.y += spawnOffsetY;
-
-	let testTx = rp.tx;
-	let testTy = rp.ty;
-
-	let lastOpenTx = rp.tx;
-	let lastOpenTy = rp.ty;
-
-	while (true) {
-		const nextTx = testTx + dx;
-		const nextTy = testTy + dy;
-
-		if (isBlocked(nextTx, nextTy, map, blocked)) {
-			break;
-		}
-
-		lastOpenTx = nextTx;
-		lastOpenTy = nextTy;
-		testTx = nextTx;
-		testTy = nextTy;
-	}
-
-	if (lastOpenTx === rp.tx && lastOpenTy === rp.ty) {
-		ball.destroy();
-		return;
-	}
-
-	const targetFeet = tileToWorldFeet(lastOpenTx, lastOpenTy);
-	const targetX = targetFeet.x + spawnOffsetX;
-	const targetY = targetFeet.y - playerFeetOffset + spawnOffsetY;
-
-	const distancePx = Phaser.Math.Distance.Between(ball.x, ball.y, targetX, targetY);
-	const projectileSpeed = 260;
-	const duration = (distancePx / projectileSpeed) * 1000;
+	const tweenState = { t: 0 };
 
 	scene.tweens.add({
-		targets: ball,
-		x: targetX,
-		y: targetY,
-		duration,
+		targets: tweenState,
+		t: 1,
+		duration: durationMs,
+		onUpdate: () => {
+			let targetX = defaultTargetX;
+			let targetY = defaultTargetY;
+
+			// If there is a target enemy still rendered, chase its current sprite position
+			if (targetEnemy) {
+				targetX = targetEnemy.sprite.x + cfg.spawnOffsetX;
+				targetY = targetEnemy.sprite.y + cfg.spawnOffsetY;
+			}
+
+			projectile.x = Phaser.Math.Linear(startX, targetX, tweenState.t);
+			projectile.y = Phaser.Math.Linear(startY, targetY, tweenState.t);
+
+			projectile.setDepth(projectile.y + playerFeetOffset + 20);
+		},
 		onComplete: () => {
-			ball.destroy();
+			projectile.destroy();
 		},
 	});
 }
