@@ -39,7 +39,7 @@ export class ArenaRoom extends Room<ArenaState> {
 		this.state = new ArenaState();
 		this.maxClients = 4;
 
-		const jsonPath = "../client/public/assets/arena-map.json";
+		const jsonPath = "/assets/arena-map.json";
 
 		this.grid = loadBlockedFromTiledJson({
 			jsonPath,
