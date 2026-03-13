@@ -60,6 +60,10 @@ export default class ArenaScene extends Phaser.Scene {
 
 	private attackKey!: Phaser.Input.Keyboard.Key;
 
+	private playerHealthBarBg?: Phaser.GameObjects.Graphics;
+	private playerHealthBarFill?: Phaser.GameObjects.Graphics;
+	private playerHealthText?: Phaser.GameObjects.Text;
+
 	private playerFeetOffset = 8;
 	private nameYOffset = 0;
 	private moveRenderMs = 140;
@@ -168,6 +172,31 @@ export default class ArenaScene extends Phaser.Scene {
 				},
 			});
 		});
+	}
+
+	private updatePlayerHealthHud(hp: number, maxHp: number) {
+		if (!this.playerHealthBarBg || !this.playerHealthBarFill || !this.playerHealthText) {
+			return;
+		}
+
+		const clampedHp = Phaser.Math.Clamp(hp, 0, maxHp);
+		const ratio = maxHp > 0 ? clampedHp / maxHp : 0;
+
+		const x = 16;
+		const y = this.cameras.main.height - 44;
+		const width = 220;
+		const height = 14;
+
+		this.playerHealthBarBg.clear();
+		this.playerHealthBarBg.fillStyle(0x000000, 0.75);
+		this.playerHealthBarBg.fillRect(x - 2, y - 2, width + 4, height + 4);
+
+		this.playerHealthBarFill.clear();
+		this.playerHealthBarFill.fillStyle(0xcc2f2f, 1);
+		this.playerHealthBarFill.fillRect(x, y, Math.round(width * ratio), height);
+
+		this.playerHealthText.setText(`HP ${clampedHp} / ${maxHp}`);
+		this.playerHealthText.setPosition(x, y - 22);
 	}
 
 	create() {
@@ -285,6 +314,20 @@ export default class ArenaScene extends Phaser.Scene {
 		});
 		this.playerListHud.setScrollFactor(0);
 		this.playerListHud.setDepth(9999);
+
+		this.playerHealthBarBg = this.add.graphics().setScrollFactor(0).setDepth(9999);
+		this.playerHealthBarFill = this.add.graphics().setScrollFactor(0).setDepth(10000);
+
+		this.playerHealthText = this.add
+			.text(16, this.cameras.main.height - 66, "HP 150 / 150", {
+				fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
+				fontSize: "14px",
+				color: "#ffffff",
+				stroke: "#000000",
+				strokeThickness: 3,
+			})
+			.setScrollFactor(0)
+			.setDepth(10001);
 
 		const players = (this.room.state as any).players;
 		const enemies = (this.room.state as any).enemies;
@@ -425,6 +468,14 @@ export default class ArenaScene extends Phaser.Scene {
 			syncToAuthoritativeState(rp, p);
 		});
 
+		const me = players.get?.(this.room.sessionId);
+		if (me) {
+			this.updatePlayerHealthHud(
+				Number(me.hp ?? 150),
+				Number(me.maxHp ?? 150)
+			);
+		}
+
 		renderPlayerList();
 
 		if (enemies) {
@@ -483,7 +534,7 @@ export default class ArenaScene extends Phaser.Scene {
 			};
 		}
 
-				const onState = () => {
+		const onState = () => {
 			const phase = (this.room.state as any).phase as string;
 
 			if (phase === "starting" && !this.shownRound1Banner) {
@@ -514,6 +565,13 @@ export default class ArenaScene extends Phaser.Scene {
 				if (!rp) return;
 
 				syncToAuthoritativeState(rp, p);
+
+				if (sid === this.room.sessionId) {
+					this.updatePlayerHealthHud(
+						Number(p.hp ?? 150),
+						Number(p.maxHp ?? 150)
+					);
+				}
 			});
 
 			renderPlayerList();
@@ -568,6 +626,15 @@ export default class ArenaScene extends Phaser.Scene {
 			try {
 				(unsubscribeState as any)?.();
 			} catch {}
+
+			this.playerHealthBarBg?.destroy();
+			this.playerHealthBarBg = undefined;
+
+			this.playerHealthBarFill?.destroy();
+			this.playerHealthBarFill = undefined;
+
+			this.playerHealthText?.destroy();
+			this.playerHealthText = undefined;
 
 			this.roundBanner?.destroy();
 			this.roundBanner = undefined;
@@ -652,6 +719,18 @@ export default class ArenaScene extends Phaser.Scene {
 			if (typeof msg?.maxHp === "number") {
 				re.maxHp = Number(msg.maxHp);
 			}
+		});
+
+		this.room.onMessage("player_damaged", (msg: any) => {
+			const playerId =
+				typeof msg?.playerId === "string" ? msg.playerId : null;
+
+			if (!playerId || playerId !== this.room.sessionId) return;
+
+			const hp = Number(msg?.hp ?? 150);
+			const maxHp = Number(msg?.maxHp ?? 150);
+
+			this.updatePlayerHealthHud(hp, maxHp);
 		});
 
 		this.game.canvas?.setAttribute("tabindex", "0");

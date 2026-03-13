@@ -375,6 +375,21 @@ export class ArenaRoom extends Room<ArenaState> {
 		}
 	}
 
+	private applyDamageToPlayer(player: Player, damage: number) {
+		const nextHp = Math.max(0, player.hp - damage);
+		player.hp = nextHp;
+
+		this.broadcast("player_damaged", {
+			playerId: player.id,
+			damage,
+			hp: nextHp,
+			maxHp: player.maxHp,
+			isKillingBlow: nextHp <= 0,
+		});
+
+		// For now, don't do death/removal logic yet.
+	}
+
 	private getProjectileSpeedTilesPerSecond(cls: string) {
 		if (cls === "magic") return 8;
 		return 10; // bow
@@ -451,6 +466,9 @@ export class ArenaRoom extends Room<ArenaState> {
 				if (now - enemy.lastAttackAt >= ATTACK_COOLDOWN_MS) {
 					enemy.lastAttackAt = now;
 					enemy.animState = "attack";
+
+					const DAMAGE = 10;
+					this.applyDamageToPlayer(target, DAMAGE);
 				} else {
 					enemy.animState = "idle";
 				}
@@ -528,6 +546,8 @@ export class ArenaRoom extends Room<ArenaState> {
 		p.tx = 0;
 		p.ty = 0;
 		p.facing = "down";
+		p.hp = 150;
+		p.maxHp = 150;
 		p.lastProcessedInput = 0;
 
 		const usedSpawnIndices = new Set<number>();

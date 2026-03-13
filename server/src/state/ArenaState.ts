@@ -10,6 +10,9 @@ export class Player extends Schema {
 
 	@type("string") facing = "down";
 
+	@type("number") hp = 150;
+	@type("number") maxHp = 150;
+
 	@type("number") lastProcessedInput = 0;
 	@type("number") spawnIndex = -1;
 }
