@@ -4,6 +4,7 @@ import { pool } from "../db/pool";
 import { sessionMiddleware } from "../session";
 import { loadBlockedFromTiledJson, type BlockedGrid } from "../map/blocking";
 import { loadSpawnPointsFromTiledJson, type SpawnPoint } from "../map/spawns";
+import path from "path";
 
 type JoinOptions = { class?: string };
 type Facing = "up" | "down" | "left" | "right";
@@ -39,7 +40,7 @@ export class ArenaRoom extends Room<ArenaState> {
 		this.state = new ArenaState();
 		this.maxClients = 4;
 
-		const jsonPath = "server/assets/arena-map.json";
+		const jsonPath = path.resolve(process.cwd(), "assets", "arena-map.json");
 
 		this.grid = loadBlockedFromTiledJson({
 			jsonPath,
