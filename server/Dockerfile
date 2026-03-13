@@ -24,7 +24,7 @@ RUN npm ci --omit=dev
 COPY --from=build /app/dist ./dist
 
 # Copy assets
-COPY assets ./server/assets
+COPY assets ./assets
 
 EXPOSE 2567
 CMD ["npm", "run", "start"]
