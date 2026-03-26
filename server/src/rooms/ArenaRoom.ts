@@ -18,7 +18,7 @@ const SPEED_BOOST_MOVE_INTERVAL_MS = 100;
 const DAMAGE_BOOST_PCT = 150;
 const EFFECT_DURATION_MS = 10000;
 const HEAL_AMOUNT = 50;
-const POWER_UP_SPAWN_INTERVAL_MS = 10000;
+const POWER_UP_SPAWN_INTERVAL_MS = 2000;
 
 function hydrateSession(req: any): Promise<void> {
 	return new Promise((resolve, reject) => {

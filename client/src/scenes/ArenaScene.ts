@@ -217,25 +217,49 @@ export default class ArenaScene extends Phaser.Scene {
 		if (hasDamage) activeKinds.push("damage");
 		if (hasSpeed) activeKinds.push("speed");
 
-		const baseX = rp.sprite.x + 18;
+		const singleX = rp.sprite.x + 18;
+		const leftX = rp.sprite.x - 18;
+		const rightX = rp.sprite.x + 18;
 		const baseY = rp.sprite.y - this.buffIconYOffset;
-		const startX =
-			baseX - ((activeKinds.length - 1) * this.buffIconSpacing) / 2;
 
-		activeKinds.forEach((kind, index) => {
+		const buffPositions: Partial<Record<"damage" | "speed", { x: number; y: number }>> = {};
+
+		if (hasDamage && hasSpeed) {
+			buffPositions.damage = {
+				x: leftX,
+				y: baseY,
+			};
+			buffPositions.speed = {
+				x: rightX,
+				y: baseY,
+			};
+		} else if (hasDamage) {
+			buffPositions.damage = {
+				x: singleX,
+				y: baseY,
+			};
+		} else if (hasSpeed) {
+			buffPositions.speed = {
+				x: singleX,
+				y: baseY,
+			};
+		}
+
+		(["damage", "speed"] as const).forEach((kind) => {
+			const pos = buffPositions[kind];
+
+			if (!pos) return;
+
 			const indicator = this.ensureSingleBuffIndicator(sessionId, kind);
 			const remainingMs =
 				kind === "damage" ? damageRemaining : speedRemaining;
 			const secondsLeft = Math.max(1, Math.ceil(remainingMs / 1000));
 
-			const x = startX + index * this.buffIconSpacing;
-			const y = baseY;
-
-			indicator.icon.setPosition(x, y);
+			indicator.icon.setPosition(pos.x, pos.y);
 			indicator.icon.setDepth(rp.sprite.depth + 20);
 
 			indicator.text.setText(String(secondsLeft));
-			indicator.text.setPosition(x, y);
+			indicator.text.setPosition(pos.x, pos.y);
 			indicator.text.setDepth(rp.sprite.depth + 21);
 		});
 	}
