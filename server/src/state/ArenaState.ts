@@ -16,6 +16,12 @@ export class Player extends Schema {
 	@type("number") lastProcessedInput = 0;
 	@type("number") spawnIndex = -1;
 	@type("boolean") alive = true;
+
+	@type("number") moveIntervalMs = 160;
+	@type("number") speedBoostUntil = 0;
+
+	@type("number") damageMultiplierPct = 100;
+	@type("number") damageBoostUntil = 0;
 }
 
 export class Enemy extends Schema {
@@ -35,12 +41,20 @@ export class Enemy extends Schema {
 	@type("number") maxHp = 100;
 }
 
+export class PowerUp extends Schema {
+	@type("string") id = "";
+	@type("string") kind = "damage"; // "damage" | "speed" | "heal"
+	@type("number") tx = 0;
+	@type("number") ty = 0;
+}
+
 export class ArenaState extends Schema {
 	@type({ map: Player }) players = new MapSchema<Player>();
 	@type({ map: Enemy }) enemies = new MapSchema<Enemy>();
+	@type({ map: PowerUp }) powerUps = new MapSchema<PowerUp>();
 
 	@type("string") hostId = "";
-	@type("string") phase = "lobby"; // lobby -> starting -> playing -> cleared
+	@type("string") phase = "lobby";
 
 	@type("number") round = 0;
 }

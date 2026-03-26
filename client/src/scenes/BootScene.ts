@@ -65,6 +65,11 @@ export default class BootScene extends Phaser.Scene {
 			frameWidth: 48,
 			frameHeight: 48,
 		});
+
+		this.load.spritesheet("powerups", "/assets/powerup-icons.png", {
+			frameWidth: 32,
+			frameHeight: 32,
+		});
 	}
 
 	create() {

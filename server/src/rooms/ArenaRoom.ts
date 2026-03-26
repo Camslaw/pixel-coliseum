@@ -1,5 +1,5 @@
 import { Room, Client, ServerError } from "@colyseus/core";
-import { ArenaState, Player, Enemy } from "../state/ArenaState";
+import { ArenaState, Player, Enemy, PowerUp } from "../state/ArenaState";
 import { pool } from "../db/pool";
 import { sessionMiddleware } from "../session";
 import { loadBlockedFromTiledJson, type BlockedGrid } from "../map/blocking";
@@ -11,6 +11,14 @@ import { assignPlayerSpawn, spawnInitialEnemy as spawnInitialEnemyIntoState } fr
 import path from "path";
 
 type JoinOptions = { class?: string };
+type PowerUpKind = "damage" | "speed" | "heal";
+
+const DEFAULT_MOVE_INTERVAL_MS = 160;
+const SPEED_BOOST_MOVE_INTERVAL_MS = 100;
+const DAMAGE_BOOST_PCT = 150;
+const EFFECT_DURATION_MS = 10000;
+const HEAL_AMOUNT = 50;
+const POWER_UP_SPAWN_INTERVAL_MS = 10000;
 
 function hydrateSession(req: any): Promise<void> {
 	return new Promise((resolve, reject) => {
@@ -36,10 +44,15 @@ export class ArenaRoom extends Room<ArenaState> {
 	private grid!: BlockedGrid;
 	private playerSpawns: SpawnPoint[] = [];
 	private enemySpawns: SpawnPoint[] = [];
+	private itemSpawns: SpawnPoint[] = [];
+
 	private nextEnemyId = 1;
+	private nextPowerUpId = 1;
+
 	private roundStartTimer: ReturnType<typeof setTimeout> | undefined;
 	private pendingEnemySpawns = 0;
-	private enemySpawnInterval: ReturnType<typeof setInterval> | undefined;	
+	private enemySpawnInterval: ReturnType<typeof setInterval> | undefined;
+	private powerUpSpawnInterval: ReturnType<typeof setInterval> | undefined;
 
 	onCreate(_options: any) {
 		this.state = new ArenaState();
@@ -53,6 +66,7 @@ export class ArenaRoom extends Room<ArenaState> {
 		this.registerLookMessage();
 		this.startEnemySimulation();
 		this.startEnemySpawnProcessor();
+		this.startPowerUpSpawnProcessor();
 	}
 
 	private loadArenaData() {
@@ -72,6 +86,11 @@ export class ArenaRoom extends Room<ArenaState> {
 		this.enemySpawns = loadSpawnPointsFromTiledJson({
 			jsonPath,
 			layerName: "EnemySpawns",
+		});
+
+		this.itemSpawns = loadSpawnPointsFromTiledJson({
+			jsonPath,
+			layerName: "ItemSpawns",
 		});
 	}
 
@@ -108,6 +127,8 @@ export class ArenaRoom extends Room<ArenaState> {
 				getFacingFromDelta: this.getFacingFromDelta.bind(this),
 				isTileOccupiedByEnemy: this.isTileOccupiedByEnemy.bind(this),
 			});
+
+			this.tryCollectPowerUpAtPlayer(p);
 		});
 	}
 
@@ -145,12 +166,60 @@ export class ArenaRoom extends Room<ArenaState> {
 
 	private startEnemySimulation() {
 		this.setSimulationInterval(() => {
+			this.cleanupExpiredPlayerEffects();
+
 			updateEnemies({
 				state: this.state,
 				grid: this.grid,
 				applyDamageToPlayer: this.applyDamageToPlayer.bind(this),
 			});
 		}, 400);
+	}
+
+	private startEnemySpawnProcessor() {
+		this.enemySpawnInterval = setInterval(() => {
+			if (this.state.phase !== "playing") return;
+			if (this.pendingEnemySpawns <= 0) return;
+
+			const spawned = this.trySpawnOneEnemy();
+			if (spawned) {
+				this.pendingEnemySpawns--;
+			}
+		}, 3000);
+	}
+
+	private startPowerUpSpawnProcessor() {
+		this.powerUpSpawnInterval = setInterval(() => {
+			if (this.state.phase !== "playing") return;
+			if (this.state.powerUps.size > 0) return;
+
+			this.trySpawnRandomPowerUp();
+		}, POWER_UP_SPAWN_INTERVAL_MS);
+	}
+
+	private startRound(roundNumber: number) {
+		if (this.roundStartTimer) {
+			clearTimeout(this.roundStartTimer);
+			this.roundStartTimer = undefined;
+		}
+
+		this.state.enemies.clear();
+		this.state.powerUps.clear();
+		this.pendingEnemySpawns = 0;
+		this.state.round = roundNumber;
+		this.state.phase = "starting";
+
+		for (const p of this.state.players.values()) {
+			p.alive = true;
+			p.hp = p.maxHp;
+			this.resetPlayerEffects(p);
+		}
+
+		this.roundStartTimer = setTimeout(() => {
+			this.state.phase = "playing";
+			this.spawnEnemiesForRound(roundNumber);
+			this.roundStartTimer = undefined;
+		}, 1800);
 	}
 
 	private trySpawnOneEnemy() {
@@ -172,39 +241,114 @@ export class ArenaRoom extends Room<ArenaState> {
 		return true;
 	}
 
-	private startEnemySpawnProcessor() {
-		this.enemySpawnInterval = setInterval(() => {
-			if (this.state.phase !== "playing") return;
-			if (this.pendingEnemySpawns <= 0) return;
+	private trySpawnRandomPowerUp() {
+		if (this.itemSpawns.length === 0) return false;
 
-			const spawned = this.trySpawnOneEnemy();
-			if (spawned) {
-				this.pendingEnemySpawns--;
-			}
-		}, 3000);
+		const availableSpawns = this.itemSpawns.filter((spawn) => {
+			if (this.grid.isBlocked(spawn.tx, spawn.ty)) return false;
+			if (this.isTileOccupiedByPlayer(spawn.tx, spawn.ty)) return false;
+			if (this.isTileOccupiedByEnemy(spawn.tx, spawn.ty)) return false;
+			if (this.isTileOccupiedByPowerUp(spawn.tx, spawn.ty)) return false;
+			return true;
+		});
+
+		if (availableSpawns.length === 0) return false;
+
+		const spawn = availableSpawns[Math.floor(Math.random() * availableSpawns.length)];
+		if (!spawn) return false;
+
+		const kinds: PowerUpKind[] = ["damage", "speed", "heal"];
+		const kind = kinds[Math.floor(Math.random() * kinds.length)];
+		if (!kind) return false;
+
+		const powerUp = new PowerUp();
+		powerUp.id = `${this.roomId}_powerup_${this.nextPowerUpId++}`;
+		powerUp.kind = kind;
+		powerUp.tx = spawn.tx;
+		powerUp.ty = spawn.ty;
+
+		this.state.powerUps.set(powerUp.id, powerUp);
+		return true;
 	}
 
-	private startRound(roundNumber: number) {
-		if (this.roundStartTimer) {
-			clearTimeout(this.roundStartTimer);
-			this.roundStartTimer = undefined;
+	private tryCollectPowerUpAtPlayer(player: Player) {
+		for (const powerUp of this.state.powerUps.values()) {
+			if (powerUp.tx !== player.tx || powerUp.ty !== player.ty) continue;
+
+			this.applyPowerUpToPlayer(player, powerUp);
+			this.state.powerUps.delete(powerUp.id);
+			return;
+		}
+	}
+
+	private applyPowerUpToPlayer(player: Player, powerUp: PowerUp) {
+		const now = Date.now();
+
+		if (powerUp.kind === "heal") {
+			player.hp = Math.min(player.maxHp, player.hp + HEAL_AMOUNT);
+
+			this.broadcast("player_powerup_collected", {
+				playerId: player.id,
+				kind: powerUp.kind,
+				hp: player.hp,
+				maxHp: player.maxHp,
+			});
+			return;
 		}
 
-		this.state.enemies.clear();
-		this.pendingEnemySpawns = 0;
-		this.state.round = roundNumber;
-		this.state.phase = "starting";
+		if (powerUp.kind === "damage") {
+			player.damageMultiplierPct = DAMAGE_BOOST_PCT;
+			player.damageBoostUntil = now + EFFECT_DURATION_MS;
 
-		for (const p of this.state.players.values()) {
-			p.alive = true;
-			p.hp = p.maxHp;
+			this.broadcast("player_powerup_collected", {
+				playerId: player.id,
+				kind: powerUp.kind,
+				damageMultiplierPct: player.damageMultiplierPct,
+				damageBoostUntil: player.damageBoostUntil,
+			});
+			return;
 		}
 
-		this.roundStartTimer = setTimeout(() => {
-			this.state.phase = "playing";
-			this.spawnEnemiesForRound(roundNumber);
-			this.roundStartTimer = undefined;
-		}, 1800);
+		if (powerUp.kind === "speed") {
+			player.moveIntervalMs = SPEED_BOOST_MOVE_INTERVAL_MS;
+			player.speedBoostUntil = now + EFFECT_DURATION_MS;
+
+			this.broadcast("player_powerup_collected", {
+				playerId: player.id,
+				kind: powerUp.kind,
+				moveIntervalMs: player.moveIntervalMs,
+				speedBoostUntil: player.speedBoostUntil,
+			});
+		}
+	}
+
+	private cleanupExpiredPlayerEffects() {
+		const now = Date.now();
+
+		for (const player of this.state.players.values()) {
+			if (
+				player.damageBoostUntil > 0 &&
+				now >= player.damageBoostUntil
+			) {
+				player.damageBoostUntil = 0;
+				player.damageMultiplierPct = 100;
+			}
+
+			if (
+				player.speedBoostUntil > 0 &&
+				now >= player.speedBoostUntil
+			) {
+				player.speedBoostUntil = 0;
+				player.moveIntervalMs = DEFAULT_MOVE_INTERVAL_MS;
+			}
+		}
+	}
+
+	private resetPlayerEffects(player: Player) {
+		player.moveIntervalMs = DEFAULT_MOVE_INTERVAL_MS;
+		player.speedBoostUntil = 0;
+		player.damageMultiplierPct = 100;
+		player.damageBoostUntil = 0;
 	}
 
 	private isTileOccupiedByPlayer(tx: number, ty: number) {
@@ -214,11 +358,17 @@ export class ArenaRoom extends Room<ArenaState> {
 		}
 		return false;
 	}
-	
 
 	private isTileOccupiedByEnemy(tx: number, ty: number) {
 		for (const e of this.state.enemies.values()) {
 			if (e.alive && e.tx === tx && e.ty === ty) return true;
+		}
+		return false;
+	}
+
+	private isTileOccupiedByPowerUp(tx: number, ty: number) {
+		for (const p of this.state.powerUps.values()) {
+			if (p.tx === tx && p.ty === ty) return true;
 		}
 		return false;
 	}
@@ -249,6 +399,7 @@ export class ArenaRoom extends Room<ArenaState> {
 			}
 
 			this.pendingEnemySpawns = 0;
+			this.state.powerUps.clear();
 			this.state.phase = "defeat";
 			this.broadcast("round_defeat", {});
 		}
@@ -358,6 +509,8 @@ export class ArenaRoom extends Room<ArenaState> {
 		p.maxHp = 150;
 		p.lastProcessedInput = 0;
 		p.alive = true;
+		p.moveIntervalMs = DEFAULT_MOVE_INTERVAL_MS;
+		p.damageMultiplierPct = 100;
 
 		const spawnResult = (() => {
 			try {
@@ -390,6 +543,7 @@ export class ArenaRoom extends Room<ArenaState> {
 			}
 
 			this.pendingEnemySpawns = 0;
+			this.state.powerUps.clear();
 			this.disconnect();
 			return;
 		}
@@ -409,6 +563,11 @@ export class ArenaRoom extends Room<ArenaState> {
 		if (this.enemySpawnInterval) {
 			clearInterval(this.enemySpawnInterval);
 			this.enemySpawnInterval = undefined;
+		}
+
+		if (this.powerUpSpawnInterval) {
+			clearInterval(this.powerUpSpawnInterval);
+			this.powerUpSpawnInterval = undefined;
 		}
 	}
 }

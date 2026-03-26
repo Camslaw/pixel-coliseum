@@ -48,6 +48,7 @@ export default class ArenaScene extends Phaser.Scene {
 	private moveIntervalMs = 160;
 	private shownRoundDefeatBanner = false;
 	private lastShownStartingRound = 0;
+	private renderPowerUps = new Map<string, Phaser.GameObjects.Sprite>();
 
 	private moveKeys!: {
 		left: Phaser.Input.Keyboard.Key;
@@ -134,6 +135,43 @@ export default class ArenaScene extends Phaser.Scene {
 	// 	this.room.send("look", { facing });
 	// }
 
+	private getPowerUpFrame(kind: string) {
+		if (kind === "damage") return 0; // sword
+		if (kind === "speed") return 1;  // boots
+		return 2; // heart
+	}
+
+	private spawnPowerUpSprite(powerUp: any, powerUpId: string) {
+		if (!this.tileToWorldFeet) return;
+		if (this.renderPowerUps.has(powerUpId)) return;
+
+		const pos = this.tileToWorldFeet(powerUp.tx, powerUp.ty);
+
+		const sprite = this.add
+			.sprite(pos.x, pos.y - 50, "powerups", this.getPowerUpFrame(powerUp.kind))
+			.setOrigin(0.5, 0.5)
+			.setScale(1)
+			.setDepth(pos.y + 5);
+
+		this.tweens.add({
+			targets: sprite,
+			y: sprite.y - 6,
+			duration: 700,
+			yoyo: true,
+			repeat: -1,
+			ease: "Sine.easeInOut",
+		});
+
+		this.renderPowerUps.set(powerUpId, sprite);
+	}
+
+	private removePowerUpSprite(powerUpId: string) {
+		const sprite = this.renderPowerUps.get(powerUpId);
+		if (!sprite) return;
+		sprite.destroy();
+		this.renderPowerUps.delete(powerUpId);
+	}
+
 	private showRoundBanner(text: string) {
 		if (this.roundBanner) {
 			this.roundBanner.destroy();
@@ -204,6 +242,7 @@ export default class ArenaScene extends Phaser.Scene {
 	create() {
 		this.renderPlayers.clear();
 		this.renderEnemies.clear();
+		this.renderPowerUps.clear();
 		this.blocked.clear();
 		this.lastMoveTime = 0;
 		// tap to turn functionality
@@ -333,6 +372,7 @@ export default class ArenaScene extends Phaser.Scene {
 
 		const players = (this.room.state as any).players;
 		const enemies = (this.room.state as any).enemies;
+		const powerUps = (this.room.state as any).powerUps;
 
 		if (!players) {
 			console.warn("Room state has no players map yet.");
@@ -481,6 +521,7 @@ export default class ArenaScene extends Phaser.Scene {
 				Number(me.hp ?? 150),
 				Number(me.maxHp ?? 150)
 			);
+			this.moveIntervalMs = Number(me.moveIntervalMs ?? 160);
 		}
 
 		renderPlayerList();
@@ -538,6 +579,20 @@ export default class ArenaScene extends Phaser.Scene {
 
 			enemies.onRemove = (_enemy: any, enemyId: string) => {
 				removeEnemySprite(this.renderEnemies, enemyId);
+			};
+		}
+
+		if (powerUps) {
+			powerUps.forEach((p: any, powerUpId: string) => {
+				this.spawnPowerUpSprite(p, powerUpId);
+			});
+
+			powerUps.onAdd = (powerUp: any, powerUpId: string) => {
+				this.spawnPowerUpSprite(powerUp, powerUpId);
+			};
+
+			powerUps.onRemove = (_powerUp: any, powerUpId: string) => {
+				this.removePowerUpSprite(powerUpId);
 			};
 		}
 
@@ -608,10 +663,25 @@ export default class ArenaScene extends Phaser.Scene {
 						Number(p.hp ?? 150),
 						Number(p.maxHp ?? 150)
 					);
+					this.moveIntervalMs = Number(p.moveIntervalMs ?? 160);
 				}
 			});
 
 			renderPlayerList();
+
+			if (powerUps) {
+				for (const powerUpId of Array.from(this.renderPowerUps.keys())) {
+					if (!powerUps.get(powerUpId)) {
+						this.removePowerUpSprite(powerUpId);
+					}
+				}
+
+				powerUps.forEach((p: any, powerUpId: string) => {
+					if (!this.renderPowerUps.has(powerUpId)) {
+						this.spawnPowerUpSprite(p, powerUpId);
+					}
+				});
+			}
 
 			if (enemies) {
 				// Remove stale rendered enemies that no longer exist in server state
@@ -689,8 +759,13 @@ export default class ArenaScene extends Phaser.Scene {
 			for (const re of this.renderEnemies.values()) {
 				re.sprite.destroy();
 			}
-			this.renderEnemies.clear();
 
+			for (const powerUpId of this.renderPowerUps.keys()) {
+				this.removePowerUpSprite(powerUpId);
+			}
+
+			this.renderPowerUps.clear();
+			this.renderEnemies.clear();
 			this.blocked.clear();
 		});
 
@@ -774,6 +849,21 @@ export default class ArenaScene extends Phaser.Scene {
 			const maxHp = Number(msg?.maxHp ?? 150);
 
 			this.updatePlayerHealthHud(hp, maxHp);
+		});
+
+		this.room.onMessage("player_powerup_collected", (msg: any) => {
+			const playerId =
+				typeof msg?.playerId === "string" ? msg.playerId : null;
+
+			if (!playerId || playerId !== this.room.sessionId) return;
+
+			if (typeof msg?.hp === "number" && typeof msg?.maxHp === "number") {
+				this.updatePlayerHealthHud(Number(msg.hp), Number(msg.maxHp));
+			}
+
+			if (typeof msg?.moveIntervalMs === "number") {
+				this.moveIntervalMs = Number(msg.moveIntervalMs);
+			}
 		});
 
 		this.game.canvas?.setAttribute("tabindex", "0");

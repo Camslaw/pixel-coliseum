@@ -29,16 +29,17 @@ export function handleAttack({
 	broadcast,
 	applyDamageToEnemy,
 }: HandleAttackOptions) {
-    if (!player.alive) return;
+	if (!player.alive) return;
 
 	player.facing = facing;
+
+	const damage = getPlayerDamage(player);
 
 	if (player.class === "sword") {
 		const enemy = getAdjacentEnemyInFacing(state, player.tx, player.ty, facing);
 		if (!enemy || !enemy.alive) return;
 
-		const DAMAGE = 25;
-		applyDamageToEnemy(enemy, DAMAGE);
+		applyDamageToEnemy(enemy, damage);
 		return;
 	}
 
@@ -64,15 +65,23 @@ export function handleAttack({
 	if (!result.enemy) return;
 
 	const targetEnemyId = result.enemy.id;
+	const projectileDamage = damage;
 
 	setTimeout(() => {
 		const enemy = state.enemies.get(targetEnemyId);
 		if (!enemy) return;
 		if (!enemy.alive) return;
 
-		const DAMAGE = 25;
-		applyDamageToEnemy(enemy, DAMAGE);
+		applyDamageToEnemy(enemy, projectileDamage);
 	}, durationMs);
+}
+
+function getPlayerDamage(player: Player) {
+	const baseDamage = 25;
+	return Math.max(
+		1,
+		Math.round((baseDamage * Number(player.damageMultiplierPct ?? 100)) / 100)
+	);
 }
 
 function getAdjacentEnemyInFacing(
