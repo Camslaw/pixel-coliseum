@@ -49,6 +49,24 @@ export default class ArenaScene extends Phaser.Scene {
 	private shownRoundDefeatBanner = false;
 	private lastShownStartingRound = 0;
 	private renderPowerUps = new Map<string, Phaser.GameObjects.Sprite>();
+		private renderPlayerBuffs = new Map<
+		string,
+		{
+			damage?: {
+				icon: Phaser.GameObjects.Sprite;
+				text: Phaser.GameObjects.Text;
+			};
+			speed?: {
+				icon: Phaser.GameObjects.Sprite;
+				text: Phaser.GameObjects.Text;
+			};
+		}
+	>();
+
+	private readonly buffIconScale = 0.72;
+	private readonly buffIconAlpha = 0.85;
+	private readonly buffIconYOffset = 60;
+	private readonly buffIconSpacing = 22;
 
 	private moveKeys!: {
 		left: Phaser.Input.Keyboard.Key;
@@ -56,11 +74,6 @@ export default class ArenaScene extends Phaser.Scene {
 		up: Phaser.Input.Keyboard.Key;
 		down: Phaser.Input.Keyboard.Key;
 	};
-
-	// tap to turn functionality
-	// private lookTapThresholdMs = 90;
-	// private pendingLookFacing: "up" | "down" | "left" | "right" | null = null;
-	// private pendingLookStartedAt = 0;
 
 	private attackKey!: Phaser.Input.Keyboard.Key;
 
@@ -102,43 +115,129 @@ export default class ArenaScene extends Phaser.Scene {
 		};
 	}
 
-	// tap to turn functionality
-	// private getJustPressedFacing():
-	// 	| "up"
-	// 	| "down"
-	// 	| "left"
-	// 	| "right"
-	// 	| null {
-	// 	if (Phaser.Input.Keyboard.JustDown(this.moveKeys.left)) return "left";
-	// 	if (Phaser.Input.Keyboard.JustDown(this.moveKeys.right)) return "right";
-	// 	if (Phaser.Input.Keyboard.JustDown(this.moveKeys.up)) return "up";
-	// 	if (Phaser.Input.Keyboard.JustDown(this.moveKeys.down)) return "down";
-	// 	return null;
-	// }
-
-	// private isFacingKeyStillDown(facing: "up" | "down" | "left" | "right") {
-	// 	if (facing === "left") return this.moveKeys.left.isDown;
-	// 	if (facing === "right") return this.moveKeys.right.isDown;
-	// 	if (facing === "up") return this.moveKeys.up.isDown;
-	// 	return this.moveKeys.down.isDown;
-	// }
-
-	// private applyLocalLook(
-	// 	meRp: RenderPlayer | undefined,
-	// 	facing: "up" | "down" | "left" | "right"
-	// ) {
-	// 	if (!meRp) return;
-
-	// 	meRp.facing = facing;
-	// 	setAnimState(meRp, "idle");
-	// 	syncLabel(meRp, this.nameYOffset);
-	// 	this.room.send("look", { facing });
-	// }
-
 	private getPowerUpFrame(kind: string) {
 		if (kind === "damage") return 0; // sword
 		if (kind === "speed") return 1;  // boots
 		return 2; // heart
+	}
+
+		private getBuffFrame(kind: "damage" | "speed") {
+		return kind === "damage" ? 0 : 1;
+	}
+
+	private destroyPlayerBuffIndicators(sessionId: string) {
+		const entry = this.renderPlayerBuffs.get(sessionId);
+		if (!entry) return;
+
+		entry.damage?.icon.destroy();
+		entry.damage?.text.destroy();
+
+		entry.speed?.icon.destroy();
+		entry.speed?.text.destroy();
+
+		this.renderPlayerBuffs.delete(sessionId);
+	}
+
+	private ensureSingleBuffIndicator(
+		sessionId: string,
+		kind: "damage" | "speed"
+	) {
+		let entry = this.renderPlayerBuffs.get(sessionId);
+		if (!entry) {
+			entry = {};
+			this.renderPlayerBuffs.set(sessionId, entry);
+		}
+
+		if (entry[kind]) return entry[kind]!;
+
+		const icon = this.add
+			.sprite(0, 0, "powerups", this.getBuffFrame(kind))
+			.setOrigin(0.5, 0.5)
+			.setScale(this.buffIconScale)
+			.setAlpha(this.buffIconAlpha)
+			.setDepth(1000);
+
+		const text = this.add
+			.text(0, 0, "10", {
+				fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
+				fontSize: "12px",
+				color: "#ffffff",
+				stroke: "#000000",
+				strokeThickness: 3,
+				align: "center",
+			})
+			.setOrigin(0.5, 0.5)
+			.setDepth(1001);
+
+		entry[kind] = { icon, text };
+		return entry[kind]!;
+	}
+
+	private removeSingleBuffIndicator(
+		sessionId: string,
+		kind: "damage" | "speed"
+	) {
+		const entry = this.renderPlayerBuffs.get(sessionId);
+		if (!entry || !entry[kind]) return;
+
+		entry[kind]!.icon.destroy();
+		entry[kind]!.text.destroy();
+		delete entry[kind];
+
+		if (!entry.damage && !entry.speed) {
+			this.renderPlayerBuffs.delete(sessionId);
+		}
+	}
+
+	private updatePlayerBuffIndicators(sessionId: string, rp: RenderPlayer, player: any) {
+		const now = Date.now();
+
+		const damageRemaining = Math.max(
+			0,
+			Number(player.damageBoostUntil ?? 0) - now
+		);
+		const speedRemaining = Math.max(
+			0,
+			Number(player.speedBoostUntil ?? 0) - now
+		);
+
+		const hasDamage = damageRemaining > 0;
+		const hasSpeed = speedRemaining > 0;
+
+		if (!hasDamage) {
+			this.removeSingleBuffIndicator(sessionId, "damage");
+		}
+		if (!hasSpeed) {
+			this.removeSingleBuffIndicator(sessionId, "speed");
+		}
+
+		if (!hasDamage && !hasSpeed) return;
+
+		const activeKinds: Array<"damage" | "speed"> = [];
+		if (hasDamage) activeKinds.push("damage");
+		if (hasSpeed) activeKinds.push("speed");
+
+		const baseX = rp.sprite.x + 18;
+		const baseY = rp.sprite.y - this.buffIconYOffset;
+		const startX =
+			baseX - ((activeKinds.length - 1) * this.buffIconSpacing) / 2;
+
+		activeKinds.forEach((kind, index) => {
+			const indicator = this.ensureSingleBuffIndicator(sessionId, kind);
+			const remainingMs =
+				kind === "damage" ? damageRemaining : speedRemaining;
+			const secondsLeft = Math.max(1, Math.ceil(remainingMs / 1000));
+
+			const x = startX + index * this.buffIconSpacing;
+			const y = baseY;
+
+			indicator.icon.setPosition(x, y);
+			indicator.icon.setDepth(rp.sprite.depth + 20);
+
+			indicator.text.setText(String(secondsLeft));
+			indicator.text.setPosition(x, y);
+			indicator.text.setDepth(rp.sprite.depth + 21);
+		});
 	}
 
 	private spawnPowerUpSprite(powerUp: any, powerUpId: string) {
@@ -245,10 +344,8 @@ export default class ArenaScene extends Phaser.Scene {
 		this.renderPowerUps.clear();
 		this.blocked.clear();
 		this.lastMoveTime = 0;
-		// tap to turn functionality
-		// this.pendingLookFacing = null;
-		// this.pendingLookStartedAt = 0;
 		this.shownRoundDefeatBanner = false;
+		this.renderPlayerBuffs.clear();
 
 		const map = this.make.tilemap({ key: "arena-map" });
 
@@ -615,11 +712,13 @@ export default class ArenaScene extends Phaser.Scene {
 				const p = players.get?.(sid);
 				if (!p) {
 					removePlayerSprite(this.renderPlayers, sid);
+					this.destroyPlayerBuffIndicators(sid);
 					continue;
 				}
 
 				if (p.alive === false) {
 					removePlayerSprite(this.renderPlayers, sid);
+					this.destroyPlayerBuffIndicators(sid);
 				}
 			}
 
@@ -657,6 +756,7 @@ export default class ArenaScene extends Phaser.Scene {
 				if (!rp) return;
 
 				syncToAuthoritativeState(rp, p);
+				this.updatePlayerBuffIndicators(sid, rp, p);
 
 				if (sid === this.room.sessionId) {
 					this.updatePlayerHealthHud(
@@ -756,6 +856,10 @@ export default class ArenaScene extends Phaser.Scene {
 				removePlayerSprite(this.renderPlayers, sessionId);
 			}
 
+			for (const sessionId of this.renderPlayerBuffs.keys()) {
+				this.destroyPlayerBuffIndicators(sessionId);
+			}
+
 			for (const re of this.renderEnemies.values()) {
 				re.sprite.destroy();
 			}
@@ -764,6 +868,7 @@ export default class ArenaScene extends Phaser.Scene {
 				this.removePowerUpSprite(powerUpId);
 			}
 
+			this.renderPlayerBuffs.clear();
 			this.renderPowerUps.clear();
 			this.renderEnemies.clear();
 			this.blocked.clear();
@@ -771,6 +876,7 @@ export default class ArenaScene extends Phaser.Scene {
 
 		players.onRemove = (_player: any, sessionId: string) => {
 			removePlayerSprite(this.renderPlayers, sessionId);
+			this.destroyPlayerBuffIndicators(sessionId);
 			renderPlayerList();
 		};
 
@@ -881,16 +987,6 @@ export default class ArenaScene extends Phaser.Scene {
 		const meState = (this.room.state as any).players?.get?.(this.room.sessionId);
 		const isMeAlive = Boolean(meState?.alive ?? true);
 
-		// tap to turn functionality
-		// if (!isMeAlive) {
-		// 	if (meRp) {
-		// 		meRp.queuedMove = null;
-		// 	}
-		// 	this.pendingLookFacing = null;
-		// 	this.pendingLookStartedAt = 0;
-		// 	return;
-		// }
-
 		if (!isMeAlive) {
 			if (meRp) {
 				meRp.queuedMove = null;
@@ -898,7 +994,7 @@ export default class ArenaScene extends Phaser.Scene {
 			return;
 		}
 
-		for (const rp of this.renderPlayers.values()) {
+		for (const [sid, rp] of this.renderPlayers.entries()) {
 			advanceRenderMove(
 				rp,
 				now,
@@ -910,6 +1006,13 @@ export default class ArenaScene extends Phaser.Scene {
 
 			if (!rp.isMoving && !rp.isAttacking) {
 				syncLabel(rp, this.nameYOffset);
+			}
+
+			const playerState = (this.room.state as any).players?.get?.(sid);
+			if (playerState && (playerState.alive ?? true)) {
+				this.updatePlayerBuffIndicators(sid, rp, playerState);
+			} else {
+				this.destroyPlayerBuffIndicators(sid);
 			}
 		}
 
@@ -923,52 +1026,6 @@ export default class ArenaScene extends Phaser.Scene {
 			}
 			return;
 		}
-
-		// tap to turn functionality
-		// const justPressedFacing = this.getJustPressedFacing();
-
-		// if (justPressedFacing && meRp && !meRp.isMoving && !meRp.isAttacking) {
-		// 	this.pendingLookFacing = justPressedFacing;
-		// 	this.pendingLookStartedAt = now;
-		// }
-
-		// if (this.pendingLookFacing && meRp && !meRp.isMoving && !meRp.isAttacking) {
-		// 	const stillDown = this.isFacingKeyStillDown(this.pendingLookFacing);
-		// 	const heldMs = now - this.pendingLookStartedAt;
-
-		// 	// Quick tap: turn only
-		// 	if (!stillDown) {
-		// 		if (heldMs < this.lookTapThresholdMs) {
-		// 			this.applyLocalLook(meRp, this.pendingLookFacing);
-		// 		}
-
-		// 		this.pendingLookFacing = null;
-		// 		this.pendingLookStartedAt = 0;
-		// 		return;
-		// 	}
-
-		// 	// Still holding, but threshold not reached yet: don't move yet
-		// 	if (heldMs < this.lookTapThresholdMs) {
-		// 		return;
-		// 	}
-
-		// 	// Threshold reached: allow normal movement to start
-		// 	this.pendingLookFacing = null;
-		// 	this.pendingLookStartedAt = 0;
-		// }
-
-		// if (Phaser.Input.Keyboard.JustDown(this.attackKey)) {
-		// 	this.pendingLookFacing = null;
-		// 	this.pendingLookStartedAt = 0;
-			
-		// 	if (
-		// 		tryStartLocalAttack(meRp, now, null, (facing) => {
-		// 			this.room.send("attack", { facing });
-		// 		})
-		// 	) {
-		// 		return;
-		// 	}
-		// }
 
 		if (Phaser.Input.Keyboard.JustDown(this.attackKey)) {
 			if (
@@ -986,14 +1043,6 @@ export default class ArenaScene extends Phaser.Scene {
 		}
 
 		const desired = getDesiredInputDirection(this.moveKeys);
-
-		// tap to turn functionality
-		// if (meRp?.isMoving) {
-		// 	this.pendingLookFacing = null;
-		// 	this.pendingLookStartedAt = 0;
-		// 	meRp.queuedMove = desired;
-		// 	return;
-		// }
 
 		if (meRp?.isMoving) {
 			meRp.queuedMove = desired;
