@@ -44,8 +44,10 @@ export class Enemy extends Schema {
 export class PowerUp extends Schema {
 	@type("string") id = "";
 	@type("string") kind = "damage"; // "damage" | "speed" | "heal"
+	@type("string") category = "buff"; // "buff" | "heal"
 	@type("number") tx = 0;
 	@type("number") ty = 0;
+	@type("number") expiresAt = 0;
 }
 
 export class ArenaState extends Schema {
