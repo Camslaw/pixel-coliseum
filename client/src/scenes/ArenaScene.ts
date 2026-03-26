@@ -46,6 +46,8 @@ export default class ArenaScene extends Phaser.Scene {
 	private lastMoveTime = 0;
 	private map?: Phaser.Tilemaps.Tilemap;
 	private moveIntervalMs = 160;
+	private shownRoundDefeatBanner = false;
+	private lastShownStartingRound = 0;
 
 	private moveKeys!: {
 		left: Phaser.Input.Keyboard.Key;
@@ -54,9 +56,10 @@ export default class ArenaScene extends Phaser.Scene {
 		down: Phaser.Input.Keyboard.Key;
 	};
 
-	private lookTapThresholdMs = 90;
-	private pendingLookFacing: "up" | "down" | "left" | "right" | null = null;
-	private pendingLookStartedAt = 0;
+	// tap to turn functionality
+	// private lookTapThresholdMs = 90;
+	// private pendingLookFacing: "up" | "down" | "left" | "right" | null = null;
+	// private pendingLookStartedAt = 0;
 
 	private attackKey!: Phaser.Input.Keyboard.Key;
 
@@ -71,8 +74,6 @@ export default class ArenaScene extends Phaser.Scene {
 	private tileToWorldFeet?: (tx: number, ty: number) => { x: number; y: number };
 
 	private roundBanner?: Phaser.GameObjects.Text;
-	private shownRound1Banner = false;
-	private shownRoundClearedBanner = false;
 
 	constructor() {
 		super("arena");
@@ -100,37 +101,38 @@ export default class ArenaScene extends Phaser.Scene {
 		};
 	}
 
-	private getJustPressedFacing():
-		| "up"
-		| "down"
-		| "left"
-		| "right"
-		| null {
-		if (Phaser.Input.Keyboard.JustDown(this.moveKeys.left)) return "left";
-		if (Phaser.Input.Keyboard.JustDown(this.moveKeys.right)) return "right";
-		if (Phaser.Input.Keyboard.JustDown(this.moveKeys.up)) return "up";
-		if (Phaser.Input.Keyboard.JustDown(this.moveKeys.down)) return "down";
-		return null;
-	}
+	// tap to turn functionality
+	// private getJustPressedFacing():
+	// 	| "up"
+	// 	| "down"
+	// 	| "left"
+	// 	| "right"
+	// 	| null {
+	// 	if (Phaser.Input.Keyboard.JustDown(this.moveKeys.left)) return "left";
+	// 	if (Phaser.Input.Keyboard.JustDown(this.moveKeys.right)) return "right";
+	// 	if (Phaser.Input.Keyboard.JustDown(this.moveKeys.up)) return "up";
+	// 	if (Phaser.Input.Keyboard.JustDown(this.moveKeys.down)) return "down";
+	// 	return null;
+	// }
 
-	private isFacingKeyStillDown(facing: "up" | "down" | "left" | "right") {
-		if (facing === "left") return this.moveKeys.left.isDown;
-		if (facing === "right") return this.moveKeys.right.isDown;
-		if (facing === "up") return this.moveKeys.up.isDown;
-		return this.moveKeys.down.isDown;
-	}
+	// private isFacingKeyStillDown(facing: "up" | "down" | "left" | "right") {
+	// 	if (facing === "left") return this.moveKeys.left.isDown;
+	// 	if (facing === "right") return this.moveKeys.right.isDown;
+	// 	if (facing === "up") return this.moveKeys.up.isDown;
+	// 	return this.moveKeys.down.isDown;
+	// }
 
-	private applyLocalLook(
-		meRp: RenderPlayer | undefined,
-		facing: "up" | "down" | "left" | "right"
-	) {
-		if (!meRp) return;
+	// private applyLocalLook(
+	// 	meRp: RenderPlayer | undefined,
+	// 	facing: "up" | "down" | "left" | "right"
+	// ) {
+	// 	if (!meRp) return;
 
-		meRp.facing = facing;
-		setAnimState(meRp, "idle");
-		syncLabel(meRp, this.nameYOffset);
-		this.room.send("look", { facing });
-	}
+	// 	meRp.facing = facing;
+	// 	setAnimState(meRp, "idle");
+	// 	syncLabel(meRp, this.nameYOffset);
+	// 	this.room.send("look", { facing });
+	// }
 
 	private showRoundBanner(text: string) {
 		if (this.roundBanner) {
@@ -204,10 +206,10 @@ export default class ArenaScene extends Phaser.Scene {
 		this.renderEnemies.clear();
 		this.blocked.clear();
 		this.lastMoveTime = 0;
-		this.shownRound1Banner = false;
-		this.shownRoundClearedBanner = false;
-		this.pendingLookFacing = null;
-		this.pendingLookStartedAt = 0;
+		// tap to turn functionality
+		// this.pendingLookFacing = null;
+		// this.pendingLookStartedAt = 0;
+		this.shownRoundDefeatBanner = false;
 
 		const map = this.make.tilemap({ key: "arena-map" });
 
@@ -441,7 +443,8 @@ export default class ArenaScene extends Phaser.Scene {
 				const host = hostId && sid === hostId ? " [host]" : "";
 				const cls = (p.class as string) ?? "(no class)";
 				const name = (p.name as string) ?? "Player";
-				lines.push(`${name} - ${cls}${host}${me}`);
+				const status = p.alive === false ? " [dead]" : "";
+				lines.push(`${name} - ${cls}${status}${host}${me}`);
 			});
 
 			this.playerListHud?.setText(
@@ -449,7 +452,9 @@ export default class ArenaScene extends Phaser.Scene {
 			);
 		};
 
-		players.forEach((p: any, sid: string) =>
+		players.forEach((p: any, sid: string) => {
+			if (p.alive === false) return;
+
 			spawnPlayerSprite(
 				this,
 				this.renderPlayers,
@@ -459,10 +464,12 @@ export default class ArenaScene extends Phaser.Scene {
 				this.playerFeetOffset,
 				this.nameYOffset,
 				PLAYER_SCALE
-			)
-		);
+			);
+		});
 
 		players.forEach((p: any, sid: string) => {
+			if (p.alive === false) return;
+
 			const rp = this.renderPlayers.get(sid);
 			if (!rp) return;
 			syncToAuthoritativeState(rp, p);
@@ -537,17 +544,47 @@ export default class ArenaScene extends Phaser.Scene {
 		const onState = () => {
 			const phase = (this.room.state as any).phase as string;
 
-			if (phase === "starting" && !this.shownRound1Banner) {
-				this.shownRound1Banner = true;
-				this.showRoundBanner("ROUND 1");
+			const round = Number((this.room.state as any).round ?? 0);
+
+			if (phase === "starting" && round > 0 && this.lastShownStartingRound !== round) {
+				this.lastShownStartingRound = round;
+				this.showRoundBanner(`ROUND ${round}`);
 			}
 
-			if (phase === "cleared" && !this.shownRoundClearedBanner) {
-				this.shownRoundClearedBanner = true;
-				this.showRoundBanner("ROUND CLEARED");
+			if (phase === "defeat" && !this.shownRoundDefeatBanner) {
+				this.shownRoundDefeatBanner = true;
+				this.showRoundBanner("DEFEAT");
+			}
+
+			for (const [sid] of Array.from(this.renderPlayers.entries())) {
+				const p = players.get?.(sid);
+				if (!p) {
+					removePlayerSprite(this.renderPlayers, sid);
+					continue;
+				}
+
+				if (p.alive === false) {
+					removePlayerSprite(this.renderPlayers, sid);
+				}
 			}
 
 			players.forEach((p: any, sid: string) => {
+				const isAlive = Boolean(p.alive ?? true);
+
+				if (!isAlive) {
+					if (this.renderPlayers.has(sid)) {
+						removePlayerSprite(this.renderPlayers, sid);
+					}
+
+					if (sid === this.room.sessionId) {
+						this.updatePlayerHealthHud(
+							Number(p.hp ?? 0),
+							Number(p.maxHp ?? 150)
+						);
+					}
+					return;
+				}
+
 				if (!this.renderPlayers.has(sid)) {
 					spawnPlayerSprite(
 						this,
@@ -615,9 +652,15 @@ export default class ArenaScene extends Phaser.Scene {
 		};
 
 		const initialPhase = (this.room.state as any).phase as string;
-		if (initialPhase === "starting" && !this.shownRound1Banner) {
-			this.shownRound1Banner = true;
-			this.showRoundBanner("ROUND 1");
+		const initialRound = Number((this.room.state as any).round ?? 0);
+
+		if (
+			initialPhase === "starting" &&
+			initialRound > 0 &&
+			this.lastShownStartingRound !== initialRound
+		) {
+			this.lastShownStartingRound = initialRound;
+			this.showRoundBanner(`ROUND ${initialRound}`);
 		}
 
 		const unsubscribeState = this.room.onStateChange(onState);
@@ -745,6 +788,25 @@ export default class ArenaScene extends Phaser.Scene {
 		const phase = (this.room.state as any).phase as string;
 		const now = this.time.now;
 		const meRp = this.renderPlayers.get(this.room.sessionId);
+		const meState = (this.room.state as any).players?.get?.(this.room.sessionId);
+		const isMeAlive = Boolean(meState?.alive ?? true);
+
+		// tap to turn functionality
+		// if (!isMeAlive) {
+		// 	if (meRp) {
+		// 		meRp.queuedMove = null;
+		// 	}
+		// 	this.pendingLookFacing = null;
+		// 	this.pendingLookStartedAt = 0;
+		// 	return;
+		// }
+
+		if (!isMeAlive) {
+			if (meRp) {
+				meRp.queuedMove = null;
+			}
+			return;
+		}
 
 		for (const rp of this.renderPlayers.values()) {
 			advanceRenderMove(
@@ -772,42 +834,53 @@ export default class ArenaScene extends Phaser.Scene {
 			return;
 		}
 
-		const justPressedFacing = this.getJustPressedFacing();
+		// tap to turn functionality
+		// const justPressedFacing = this.getJustPressedFacing();
 
-		if (justPressedFacing && meRp && !meRp.isMoving && !meRp.isAttacking) {
-			this.pendingLookFacing = justPressedFacing;
-			this.pendingLookStartedAt = now;
-		}
+		// if (justPressedFacing && meRp && !meRp.isMoving && !meRp.isAttacking) {
+		// 	this.pendingLookFacing = justPressedFacing;
+		// 	this.pendingLookStartedAt = now;
+		// }
 
-		if (this.pendingLookFacing && meRp && !meRp.isMoving && !meRp.isAttacking) {
-			const stillDown = this.isFacingKeyStillDown(this.pendingLookFacing);
-			const heldMs = now - this.pendingLookStartedAt;
+		// if (this.pendingLookFacing && meRp && !meRp.isMoving && !meRp.isAttacking) {
+		// 	const stillDown = this.isFacingKeyStillDown(this.pendingLookFacing);
+		// 	const heldMs = now - this.pendingLookStartedAt;
 
-			// Quick tap: turn only
-			if (!stillDown) {
-				if (heldMs < this.lookTapThresholdMs) {
-					this.applyLocalLook(meRp, this.pendingLookFacing);
-				}
+		// 	// Quick tap: turn only
+		// 	if (!stillDown) {
+		// 		if (heldMs < this.lookTapThresholdMs) {
+		// 			this.applyLocalLook(meRp, this.pendingLookFacing);
+		// 		}
 
-				this.pendingLookFacing = null;
-				this.pendingLookStartedAt = 0;
-				return;
-			}
+		// 		this.pendingLookFacing = null;
+		// 		this.pendingLookStartedAt = 0;
+		// 		return;
+		// 	}
 
-			// Still holding, but threshold not reached yet: don't move yet
-			if (heldMs < this.lookTapThresholdMs) {
-				return;
-			}
+		// 	// Still holding, but threshold not reached yet: don't move yet
+		// 	if (heldMs < this.lookTapThresholdMs) {
+		// 		return;
+		// 	}
 
-			// Threshold reached: allow normal movement to start
-			this.pendingLookFacing = null;
-			this.pendingLookStartedAt = 0;
-		}
+		// 	// Threshold reached: allow normal movement to start
+		// 	this.pendingLookFacing = null;
+		// 	this.pendingLookStartedAt = 0;
+		// }
+
+		// if (Phaser.Input.Keyboard.JustDown(this.attackKey)) {
+		// 	this.pendingLookFacing = null;
+		// 	this.pendingLookStartedAt = 0;
+			
+		// 	if (
+		// 		tryStartLocalAttack(meRp, now, null, (facing) => {
+		// 			this.room.send("attack", { facing });
+		// 		})
+		// 	) {
+		// 		return;
+		// 	}
+		// }
 
 		if (Phaser.Input.Keyboard.JustDown(this.attackKey)) {
-			this.pendingLookFacing = null;
-			this.pendingLookStartedAt = 0;
-			
 			if (
 				tryStartLocalAttack(meRp, now, null, (facing) => {
 					this.room.send("attack", { facing });
@@ -824,9 +897,15 @@ export default class ArenaScene extends Phaser.Scene {
 
 		const desired = getDesiredInputDirection(this.moveKeys);
 
+		// tap to turn functionality
+		// if (meRp?.isMoving) {
+		// 	this.pendingLookFacing = null;
+		// 	this.pendingLookStartedAt = 0;
+		// 	meRp.queuedMove = desired;
+		// 	return;
+		// }
+
 		if (meRp?.isMoving) {
-			this.pendingLookFacing = null;
-			this.pendingLookStartedAt = 0;
 			meRp.queuedMove = desired;
 			return;
 		}

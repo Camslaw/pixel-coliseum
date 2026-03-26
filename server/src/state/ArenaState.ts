@@ -15,6 +15,7 @@ export class Player extends Schema {
 
 	@type("number") lastProcessedInput = 0;
 	@type("number") spawnIndex = -1;
+	@type("boolean") alive = true;
 }
 
 export class Enemy extends Schema {
@@ -40,4 +41,6 @@ export class ArenaState extends Schema {
 
 	@type("string") hostId = "";
 	@type("string") phase = "lobby"; // lobby -> starting -> playing -> cleared
+
+	@type("number") round = 0;
 }
