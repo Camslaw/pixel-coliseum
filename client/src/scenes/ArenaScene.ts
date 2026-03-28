@@ -373,13 +373,12 @@ export default class ArenaScene extends Phaser.Scene {
 
 		const map = this.make.tilemap({ key: "arena-map" });
 
-		this.moveRenderMs = 160;
-		this.enemyMoveRenderMs = 400;
-		const WALK_FPS = 10;
+		const WALK_FPS = 16;
 		const MOVE_INTERVAL_MS = 160;
 
 		this.map = map;
 		this.moveIntervalMs = MOVE_INTERVAL_MS;
+		this.moveRenderMs = MOVE_INTERVAL_MS;
 
 		const tileset = map.addTilesetImage("arena-tileset", "tiles");
 		if (!tileset) throw new Error("Tileset mapping failed.");
@@ -552,7 +551,10 @@ export default class ArenaScene extends Phaser.Scene {
 
 					rp.sprite.setPosition(pos.x, spriteY);
 					rp.sprite.setDepth(pos.y);
-					setAnimState(rp, "idle");
+
+					if (!rp.isAttacking) {
+						setAnimState(rp, "idle");
+					}
 				}
 
 				syncLabel(rp, this.nameYOffset, player.name ?? "Player");
@@ -585,7 +587,9 @@ export default class ArenaScene extends Phaser.Scene {
 				);
 			} else {
 				rp.facing = facing;
-				setAnimState(rp, "walk");
+				if (!rp.isAttacking) {
+					setAnimState(rp, "walk");
+				}
 			}
 
 			syncLabel(rp, this.nameYOffset, player.name ?? "Player");
@@ -642,7 +646,9 @@ export default class ArenaScene extends Phaser.Scene {
 				Number(me.hp ?? 150),
 				Number(me.maxHp ?? 150)
 			);
+
 			this.moveIntervalMs = Number(me.moveIntervalMs ?? 160);
+			this.moveRenderMs = this.moveIntervalMs;
 		}
 
 		renderPlayerList();
@@ -788,6 +794,7 @@ export default class ArenaScene extends Phaser.Scene {
 						Number(p.maxHp ?? 150)
 					);
 					this.moveIntervalMs = Number(p.moveIntervalMs ?? 160);
+					this.moveRenderMs = this.moveIntervalMs;	
 				}
 			});
 
@@ -981,6 +988,39 @@ export default class ArenaScene extends Phaser.Scene {
 			this.updatePlayerHealthHud(hp, maxHp);
 		});
 
+		this.room.onMessage("player_attacked", (msg: any) => {
+			const playerId =
+				typeof msg?.playerId === "string" ? msg.playerId : null;
+			const facing = msg?.facing as "up" | "down" | "left" | "right" | undefined;
+
+			if (!playerId || !facing) return;
+			if (playerId === this.room.sessionId) return;
+
+			const rp = this.renderPlayers.get(playerId);
+
+			if (!rp) return;
+
+			rp.facing = facing;
+
+			// Remote attacks should override current interpolation.
+			if (rp.isMoving) {
+				rp.isMoving = false;
+				rp.sprite.x = rp.toX;
+				rp.sprite.y = rp.toY;
+				rp.sprite.setDepth(rp.sprite.y + this.playerFeetOffset);
+				syncLabel(rp, this.nameYOffset);
+			}
+
+			rp.isAttacking = true;
+			rp.attackEndTime = this.time.now + (
+				rp.className === "bow" ? 220 :
+				rp.className === "magic" ? 260 :
+				180
+			);
+
+			setAnimState(rp, "attack");
+		});
+
 		this.room.onMessage("player_powerup_collected", (msg: any) => {
 			const playerId =
 				typeof msg?.playerId === "string" ? msg.playerId : null;
@@ -993,6 +1033,7 @@ export default class ArenaScene extends Phaser.Scene {
 
 			if (typeof msg?.moveIntervalMs === "number") {
 				this.moveIntervalMs = Number(msg.moveIntervalMs);
+				this.moveRenderMs = this.moveIntervalMs;
 			}
 		});
 

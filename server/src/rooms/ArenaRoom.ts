@@ -14,8 +14,8 @@ type JoinOptions = { class?: string };
 type PowerUpKind = "damage" | "speed" | "heal";
 
 const DEFAULT_MOVE_INTERVAL_MS = 160;
-const SPEED_BOOST_MOVE_INTERVAL_MS = 100;
-const DAMAGE_BOOST_PCT = 150;
+const SPEED_BOOST_MOVE_INTERVAL_MS = 120;
+const DAMAGE_BOOST_PCT = 295;
 const EFFECT_DURATION_MS = 10000;
 const HEAL_AMOUNT = 50;
 type PowerUpCategory = "buff" | "heal";
@@ -146,6 +146,12 @@ export class ArenaRoom extends Room<ArenaState> {
 			if (!p || !p.alive) return;
 
 			const facing = normalizeFacing(msg?.facing) ?? (p.facing as Facing);
+
+			this.broadcast("player_attacked", {
+				playerId: p.id,
+				class: p.class,
+				facing,
+			});
 
 			handleAttack({
 				state: this.state,

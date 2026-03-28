@@ -77,7 +77,7 @@ export function handleAttack({
 }
 
 function getPlayerDamage(player: Player) {
-	const baseDamage = 25;
+	const baseDamage = 34;
 	return Math.max(
 		1,
 		Math.round((baseDamage * Number(player.damageMultiplierPct ?? 100)) / 100)
