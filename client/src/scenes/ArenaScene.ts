@@ -1049,11 +1049,8 @@ export default class ArenaScene extends Phaser.Scene {
 		const meState = (this.room.state as any).players?.get?.(this.room.sessionId);
 		const isMeAlive = Boolean(meState?.alive ?? true);
 
-		if (!isMeAlive) {
-			if (meRp) {
-				meRp.queuedMove = null;
-			}
-			return;
+		if (!isMeAlive && meRp) {
+			meRp.queuedMove = null;
 		}
 
 		for (const [sid, rp] of this.renderPlayers.entries()) {

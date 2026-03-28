@@ -238,6 +238,7 @@ export class ArenaRoom extends Room<ArenaState> {
 		for (const p of this.state.players.values()) {
 			p.alive = true;
 			p.hp = p.maxHp;
+			p.lastProcessedInput = 0;
 			this.resetPlayerEffects(p);
 		}
 
