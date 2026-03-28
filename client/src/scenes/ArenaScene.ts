@@ -587,9 +587,7 @@ export default class ArenaScene extends Phaser.Scene {
 				);
 			} else {
 				rp.facing = facing;
-				if (!rp.isAttacking) {
-					setAnimState(rp, "walk");
-				}
+				setAnimState(rp, "walk");
 			}
 
 			syncLabel(rp, this.nameYOffset, player.name ?? "Player");
@@ -997,7 +995,6 @@ export default class ArenaScene extends Phaser.Scene {
 			if (playerId === this.room.sessionId) return;
 
 			const rp = this.renderPlayers.get(playerId);
-
 			if (!rp) return;
 
 			rp.facing = facing;
