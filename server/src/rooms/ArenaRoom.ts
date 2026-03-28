@@ -470,7 +470,8 @@ export class ArenaRoom extends Room<ArenaState> {
 	}
 
 	private spawnEnemiesForRound(roundNumber: number) {
-		const totalToSpawn = 4 + (roundNumber - 1) * 2;
+		const playerCount = Math.max(1, this.state.players.size);
+		const totalToSpawn = (4 + (roundNumber - 1) * 2) * playerCount;
 
 		this.pendingEnemySpawns = 0;
 
