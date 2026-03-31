@@ -288,6 +288,19 @@ export default class ArenaScene extends Phaser.Scene {
 		this.renderPowerUps.set(powerUpId, sprite);
 	}
 
+	private resetLocalInputState() {
+		this.input.keyboard?.resetKeys();
+
+		const meRp = this.renderPlayers.get(this.room.sessionId);
+		if (!meRp) return;
+
+		meRp.queuedMove = null;
+
+		if (!meRp.isMoving && !meRp.isAttacking) {
+			setAnimState(meRp, "idle");
+		}
+	}
+
 	private removePowerUpSprite(powerUpId: string) {
 		const sprite = this.renderPowerUps.get(powerUpId);
 		if (!sprite) return;
@@ -865,6 +878,10 @@ export default class ArenaScene extends Phaser.Scene {
 		const unsubscribeState = this.room.onStateChange(onState);
 
 		this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+			this.game.events.off(Phaser.Core.Events.BLUR, handleGameBlur);
+			window.removeEventListener("blur", handleWindowBlur);
+			document.removeEventListener("visibilitychange", handleVisibilityChange);
+
 			try {
 				(unsubscribeState as any)?.();
 			} catch {}
@@ -1033,6 +1050,24 @@ export default class ArenaScene extends Phaser.Scene {
 				this.moveRenderMs = this.moveIntervalMs;
 			}
 		});
+
+		const handleGameBlur = () => {
+			this.resetLocalInputState();
+		};
+
+		const handleWindowBlur = () => {
+			this.resetLocalInputState();
+		};
+
+		const handleVisibilityChange = () => {
+			if (document.hidden) {
+				this.resetLocalInputState();
+			}
+		};
+
+		this.game.events.on(Phaser.Core.Events.BLUR, handleGameBlur);
+		window.addEventListener("blur", handleWindowBlur);
+		document.addEventListener("visibilitychange", handleVisibilityChange);
 
 		this.game.canvas?.setAttribute("tabindex", "0");
 		this.game.canvas?.addEventListener("pointerdown", () => {
