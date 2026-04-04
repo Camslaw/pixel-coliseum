@@ -49,7 +49,7 @@ export default class ArenaScene extends Phaser.Scene {
 	private shownRoundDefeatBanner = false;
 	private lastShownStartingRound = 0;
 	private renderPowerUps = new Map<string, Phaser.GameObjects.Sprite>();
-		private renderPlayerBuffs = new Map<
+	private renderPlayerBuffs = new Map<
 		string,
 		{
 			damage?: {
@@ -67,6 +67,8 @@ export default class ArenaScene extends Phaser.Scene {
 	private readonly buffIconAlpha = 0.85;
 	private readonly buffIconYOffset = 60;
 	private readonly buffIconSpacing = 22;
+
+	private playerScoreText?: Phaser.GameObjects.Text;
 
 	private moveKeys!: {
 		left: Phaser.Input.Keyboard.Key;
@@ -301,6 +303,10 @@ export default class ArenaScene extends Phaser.Scene {
 		}
 	}
 
+	private updatePlayerScoreHud(score: number) {
+		this.playerScoreText?.setText(`Score: ${score}`);
+	}
+
 	private removePowerUpSprite(powerUpId: string) {
 		const sprite = this.renderPowerUps.get(powerUpId);
 		if (!sprite) return;
@@ -503,6 +509,17 @@ export default class ArenaScene extends Phaser.Scene {
 			.setScrollFactor(0)
 			.setDepth(10001);
 
+		this.playerScoreText = this.add
+		.text(16, this.cameras.main.height - 92, "Score: 0", {
+			fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
+			fontSize: "14px",
+			color: "#ffffff",
+			stroke: "#000000",
+			strokeThickness: 3,
+		})
+		.setScrollFactor(0)
+		.setDepth(10001);
+
 		const players = (this.room.state as any).players;
 		const enemies = (this.room.state as any).enemies;
 		const powerUps = (this.room.state as any).powerUps;
@@ -658,6 +675,8 @@ export default class ArenaScene extends Phaser.Scene {
 				Number(me.maxHp ?? 150)
 			);
 
+			this.updatePlayerScoreHud(Number(me.score ?? 0));
+
 			this.moveIntervalMs = Number(me.moveIntervalMs ?? 160);
 			this.moveRenderMs = this.moveIntervalMs;
 		}
@@ -804,6 +823,7 @@ export default class ArenaScene extends Phaser.Scene {
 						Number(p.hp ?? 150),
 						Number(p.maxHp ?? 150)
 					);
+					this.updatePlayerScoreHud(Number(p.score ?? 0));
 					this.moveIntervalMs = Number(p.moveIntervalMs ?? 160);
 					this.moveRenderMs = this.moveIntervalMs;	
 				}

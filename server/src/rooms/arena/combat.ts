@@ -18,7 +18,7 @@ type HandleAttackOptions = {
 	player: Player;
 	facing: Facing;
 	broadcast: BroadcastFn;
-	applyDamageToEnemy: (enemy: Enemy, damage: number) => void;
+	applyDamageToEnemy: (enemy: Enemy, damage: number, attacker?: Player) => void
 };
 
 export function handleAttack({
@@ -39,7 +39,7 @@ export function handleAttack({
 		const enemy = getAdjacentEnemyInFacing(state, player.tx, player.ty, facing);
 		if (!enemy || !enemy.alive) return;
 
-		applyDamageToEnemy(enemy, damage);
+		applyDamageToEnemy(enemy, damage, player);
 		return;
 	}
 
@@ -72,7 +72,7 @@ export function handleAttack({
 		if (!enemy) return;
 		if (!enemy.alive) return;
 
-		applyDamageToEnemy(enemy, projectileDamage);
+		applyDamageToEnemy(enemy, projectileDamage, player);
 	}, durationMs);
 }
 

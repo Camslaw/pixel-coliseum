@@ -11,11 +11,9 @@ function getWsUrl(): string {
   if (api && api.trim()) {
     const u = new URL(api);
     u.protocol = u.protocol === "https:" ? "wss:" : "ws:";
-    // trim trailing slash
     return u.toString().replace(/\/$/, "");
   }
 
-  // last-resort dev fallback
   return "ws://localhost:2567";
 }
 
@@ -51,6 +49,7 @@ export default class HubScene extends Phaser.Scene {
     const el = this.uiRoot.node as HTMLDivElement;
 
     const signedInAs = el.querySelector<HTMLDivElement>("#signedInAs")!;
+    const profileBtn = el.querySelector<HTMLButtonElement>("#profile")!;
     const roomIdInput = el.querySelector<HTMLInputElement>("#roomId")!;
     const status = el.querySelector<HTMLDivElement>("#status")!;
     const logoutBtn = el.querySelector<HTMLButtonElement>("#logout")!;
@@ -62,6 +61,12 @@ export default class HubScene extends Phaser.Scene {
       this.uiRoot?.destroy();
       this.uiRoot = undefined;
       this.scene.start("lobby", { room });
+    };
+
+    profileBtn.onclick = () => {
+      this.uiRoot?.destroy();
+      this.uiRoot = undefined;
+      this.scene.start("profile");
     };
 
     logoutBtn.onclick = async () => {

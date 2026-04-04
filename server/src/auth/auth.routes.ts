@@ -204,6 +204,48 @@ authRouter.get("/me", async (req, res) => {
   }
 });
 
+authRouter.get("/me/stats", async (req, res) => {
+  try {
+    const userId = req.session.userId;
+    if (!userId) return res.status(401).json({ error: "UNAUTHENTICATED" });
+
+    const result = await pool.query(
+      `
+      SELECT
+        COALESCE(ps.highest_score, 0) AS highest_score,
+        COALESCE(ps.highest_round_survived, 0) AS highest_round_survived,
+        COALESCE(ps.total_score, 0) AS total_score,
+        COALESCE(ps.total_kills, 0) AS total_kills,
+        COALESCE(ps.total_powerups_collected, 0) AS total_powerups_collected,
+        COALESCE(ps.total_time_played_seconds, 0) AS total_time_played_seconds,
+        COALESCE(ps.games_played, 0) AS games_played
+      FROM users u
+      LEFT JOIN player_stats ps ON ps.user_id = u.id
+      WHERE u.id = $1
+      `,
+      [userId]
+    );
+
+    const row = result.rows[0];
+    if (!row) return res.status(401).json({ error: "UNAUTHENTICATED" });
+
+    return res.json({
+      stats: {
+        highestScore: Number(row.highest_score ?? 0),
+        highestRoundSurvived: Number(row.highest_round_survived ?? 0),
+        totalScore: Number(row.total_score ?? 0),
+        totalKills: Number(row.total_kills ?? 0),
+        totalPowerupsCollected: Number(row.total_powerups_collected ?? 0),
+        totalTimePlayedSeconds: Number(row.total_time_played_seconds ?? 0),
+        gamesPlayed: Number(row.games_played ?? 0),
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "SERVER_ERROR" });
+  }
+});
+
 authRouter.post("/request-password-reset", async (req, res) => {
   try {
     const email = normalizeEmail(req.body?.email);

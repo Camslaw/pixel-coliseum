@@ -4,6 +4,7 @@ import AuthScene from "./scenes/AuthScene";
 import HubScene from "./scenes/HubScene";
 import LobbyScene from "./scenes/LobbyScene";
 import ArenaScene from "./scenes/ArenaScene";
+import ProfileScene from "./scenes/ProfileScene";
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -16,7 +17,7 @@ const config: Phaser.Types.Core.GameConfig = {
     height: window.innerHeight,
   },
 
-  scene: [BootScene, AuthScene, HubScene, LobbyScene, ArenaScene],
+  scene: [BootScene, AuthScene, HubScene, ProfileScene, LobbyScene, ArenaScene],
   dom: { createContainer: true },
   pixelArt: true,
   roundPixels: true,

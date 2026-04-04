@@ -24,6 +24,8 @@ const BUFF_SPAWN_INTERVAL_MS = 2000;
 const HEAL_SPAWN_INTERVAL_MS = 2000;
 const POWER_UP_LIFETIME_MS = 12000;
 const MAX_ACTIVE_BUFF_POWERUPS = 2;
+const SCORE_PER_KILL = 50;
+const SCORE_PER_POWERUP = 25;
 
 function hydrateSession(req: any): Promise<void> {
 	return new Promise((resolve, reject) => {
@@ -240,6 +242,19 @@ export class ArenaRoom extends Room<ArenaState> {
 			p.hp = p.maxHp;
 			p.lastProcessedInput = 0;
 			this.resetPlayerEffects(p);
+
+			// if this is the first round, mark run start
+			if (roundNumber === 1 && p.runStartedAt === 0) {
+			p.runStartedAt = Date.now();
+			p.score = 0;
+			p.kills = 0;
+			p.powerUpsCollected = 0;
+			p.roundSurvived = 0;
+			p.statsCommitted = false;
+			}
+
+			// entering round N means round N-1 was survived
+			p.roundSurvived = Math.max(p.roundSurvived, roundNumber - 1);
 		}
 
 		this.roundStartTimer = setTimeout(() => {
@@ -247,7 +262,7 @@ export class ArenaRoom extends Room<ArenaState> {
 			this.spawnEnemiesForRound(roundNumber);
 			this.roundStartTimer = undefined;
 		}, 1800);
-	}
+		}
 
 	private trySpawnOneEnemy() {
 		const result = spawnInitialEnemyIntoState({
@@ -348,14 +363,19 @@ export class ArenaRoom extends Room<ArenaState> {
 	private applyPowerUpToPlayer(player: Player, powerUp: PowerUp) {
 		const now = Date.now();
 
+		player.powerUpsCollected += 1;
+		player.score += SCORE_PER_POWERUP;
+
 		if (powerUp.kind === "heal") {
 			player.hp = Math.min(player.maxHp, player.hp + HEAL_AMOUNT);
 
 			this.broadcast("player_powerup_collected", {
-				playerId: player.id,
-				kind: powerUp.kind,
-				hp: player.hp,
-				maxHp: player.maxHp,
+			playerId: player.id,
+			kind: powerUp.kind,
+			hp: player.hp,
+			maxHp: player.maxHp,
+			score: player.score,
+			powerUpsCollected: player.powerUpsCollected,
 			});
 			return;
 		}
@@ -365,10 +385,12 @@ export class ArenaRoom extends Room<ArenaState> {
 			player.damageBoostUntil = now + EFFECT_DURATION_MS;
 
 			this.broadcast("player_powerup_collected", {
-				playerId: player.id,
-				kind: powerUp.kind,
-				damageMultiplierPct: player.damageMultiplierPct,
-				damageBoostUntil: player.damageBoostUntil,
+			playerId: player.id,
+			kind: powerUp.kind,
+			damageMultiplierPct: player.damageMultiplierPct,
+			damageBoostUntil: player.damageBoostUntil,
+			score: player.score,
+			powerUpsCollected: player.powerUpsCollected,
 			});
 			return;
 		}
@@ -378,13 +400,15 @@ export class ArenaRoom extends Room<ArenaState> {
 			player.speedBoostUntil = now + EFFECT_DURATION_MS;
 
 			this.broadcast("player_powerup_collected", {
-				playerId: player.id,
-				kind: powerUp.kind,
-				moveIntervalMs: player.moveIntervalMs,
-				speedBoostUntil: player.speedBoostUntil,
+			playerId: player.id,
+			kind: powerUp.kind,
+			moveIntervalMs: player.moveIntervalMs,
+			speedBoostUntil: player.speedBoostUntil,
+			score: player.score,
+			powerUpsCollected: player.powerUpsCollected,
 			});
 		}
-	}
+		}
 
 	private cleanupExpiredPlayerEffects() {
 		const now = Date.now();
@@ -466,6 +490,10 @@ export class ArenaRoom extends Room<ArenaState> {
 			this.state.powerUps.clear();
 			this.state.phase = "defeat";
 			this.broadcast("round_defeat", {});
+
+			for (const p of this.state.players.values()) {
+				void this.persistPlayerRunStats(p);
+			}
 		}
 	}
 
@@ -494,30 +522,89 @@ export class ArenaRoom extends Room<ArenaState> {
 		return "down";
 	}
 
-	private applyDamageToEnemy(enemy: Enemy, damage: number) {
+	private async persistPlayerRunStats(player: Player) {
+		if (!player.userId) return;
+		if (player.statsCommitted) return;
+		if (player.runStartedAt <= 0) return;
+
+		const elapsedSeconds = Math.max(
+			0,
+			Math.floor((Date.now() - player.runStartedAt) / 1000)
+		);
+
+		await pool.query(
+			`
+			INSERT INTO player_stats (
+			user_id,
+			highest_score,
+			highest_round_survived,
+			total_score,
+			total_kills,
+			total_powerups_collected,
+			total_time_played_seconds,
+			games_played,
+			updated_at
+			)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, 1, now())
+			ON CONFLICT (user_id)
+			DO UPDATE SET
+			highest_score = GREATEST(player_stats.highest_score, EXCLUDED.highest_score),
+			highest_round_survived = GREATEST(player_stats.highest_round_survived, EXCLUDED.highest_round_survived),
+			total_score = player_stats.total_score + EXCLUDED.total_score,
+			total_kills = player_stats.total_kills + EXCLUDED.total_kills,
+			total_powerups_collected = player_stats.total_powerups_collected + EXCLUDED.total_powerups_collected,
+			total_time_played_seconds = player_stats.total_time_played_seconds + EXCLUDED.total_time_played_seconds,
+			games_played = player_stats.games_played + 1,
+			updated_at = now()
+			`,
+			[
+			player.userId,
+			player.score,
+			player.roundSurvived,
+			player.score,
+			player.kills,
+			player.powerUpsCollected,
+			elapsedSeconds,
+			]
+		);
+
+		player.statsCommitted = true;
+		}
+
+	private applyDamageToEnemy(enemy: Enemy, damage: number, attacker?: Player) {
 		const prevHp = enemy.hp;
 		const nextHp = Math.max(0, prevHp - damage);
 
 		enemy.hp = nextHp;
+
+		const isKillingBlow = nextHp <= 0;
+
+		if (isKillingBlow && attacker) {
+			attacker.kills += 1;
+			attacker.score += SCORE_PER_KILL;
+		}
 
 		this.broadcast("enemy_damaged", {
 			enemyId: enemy.id,
 			damage,
 			hp: nextHp,
 			maxHp: enemy.maxHp,
-			isKillingBlow: nextHp <= 0,
+			isKillingBlow,
+			attackerId: attacker?.id ?? null,
+			attackerScore: attacker?.score ?? null,
+			attackerKills: attacker?.kills ?? null,
 		});
 
-		if (nextHp <= 0) {
+		if (isKillingBlow) {
 			enemy.alive = false;
 			this.state.enemies.delete(enemy.id);
 
 			if (this.state.enemies.size === 0) {
-				const nextRound = this.state.round + 1;
-				this.startRound(nextRound);
+			const nextRound = this.state.round + 1;
+			this.startRound(nextRound);
 			}
 		}
-	}
+		}
 
 	private applyDamageToPlayer(player: Player, damage: number) {
 		if (!player.alive) return;
@@ -553,58 +640,71 @@ export class ArenaRoom extends Room<ArenaState> {
 	}
 
 	async onJoin(client: Client, _options: JoinOptions) {
-		const userId = (client as any).userId as string | undefined;
-		if (!userId) throw new ServerError(4216, "UNAUTHENTICATED");
+	const userId = (client as any).userId as string | undefined;
+	if (!userId) throw new ServerError(4216, "UNAUTHENTICATED");
 
-		const r = await pool.query(
-			`SELECT display_name FROM users WHERE id = $1`,
-			[userId]
-		);
+	const r = await pool.query(
+		`SELECT display_name FROM users WHERE id = $1`,
+		[userId]
+	);
 
-		const displayName = String(r.rows[0]?.display_name ?? "Player").slice(0, 16);
+	const displayName = String(r.rows[0]?.display_name ?? "Player").slice(0, 16);
 
-		const p = new Player();
-		p.id = client.sessionId;
-		p.name = displayName;
-		p.class = "sword";
-		p.tx = 0;
-		p.ty = 0;
-		p.facing = "down";
-		p.hp = 150;
-		p.maxHp = 150;
-		p.lastProcessedInput = 0;
-		p.alive = true;
-		p.moveIntervalMs = DEFAULT_MOVE_INTERVAL_MS;
-		p.damageMultiplierPct = 100;
+	const p = new Player();
+	p.id = client.sessionId;
+	p.userId = userId;
+	p.name = displayName;
+	p.class = "sword";
+	p.tx = 0;
+	p.ty = 0;
+	p.facing = "down";
+	p.hp = 150;
+	p.maxHp = 150;
+	p.lastProcessedInput = 0;
+	p.alive = true;
+	p.moveIntervalMs = DEFAULT_MOVE_INTERVAL_MS;
+	p.damageMultiplierPct = 100;
 
-		const spawnResult = (() => {
-			try {
-				return assignPlayerSpawn({
-					state: this.state,
-					grid: this.grid,
-					playerSpawns: this.playerSpawns,
-					isTileOccupiedByPlayer: this.isTileOccupiedByPlayer.bind(this),
-				});
-			} catch {
-				throw new ServerError(5000, "NO_PLAYER_SPAWNS_DEFINED");
-			}
-		})();
+	p.score = 0;
+	p.kills = 0;
+	p.powerUpsCollected = 0;
+	p.roundSurvived = 0;
+	p.runStartedAt = 0;
+	p.statsCommitted = false;
 
-		p.spawnIndex = spawnResult.spawnIndex;
-		p.tx = spawnResult.tx;
-		p.ty = spawnResult.ty;
+	const spawnResult = (() => {
+		try {
+		return assignPlayerSpawn({
+			state: this.state,
+			grid: this.grid,
+			playerSpawns: this.playerSpawns,
+			isTileOccupiedByPlayer: this.isTileOccupiedByPlayer.bind(this),
+		});
+		} catch {
+		throw new ServerError(5000, "NO_PLAYER_SPAWNS_DEFINED");
+		}
+	})();
 
-		this.state.players.set(client.sessionId, p);
-		if (!this.state.hostId) this.state.hostId = client.sessionId;
+	p.spawnIndex = spawnResult.spawnIndex;
+	p.tx = spawnResult.tx;
+	p.ty = spawnResult.ty;
+
+	this.state.players.set(client.sessionId, p);
+	if (!this.state.hostId) this.state.hostId = client.sessionId;
 	}
 
 	onLeave(client: Client) {
+		const player = this.state.players.get(client.sessionId);
+		if (player) {
+			void this.persistPlayerRunStats(player);
+		}
+
 		this.state.players.delete(client.sessionId);
 
 		if (this.state.players.size === 0) {
 			if (this.roundStartTimer) {
-				clearTimeout(this.roundStartTimer);
-				this.roundStartTimer = undefined;
+			clearTimeout(this.roundStartTimer);
+			this.roundStartTimer = undefined;
 			}
 
 			this.pendingEnemySpawns = 0;

@@ -1,0 +1,42 @@
+.profile-root {
+	min-width: 520px;
+}
+
+.profile-title {
+	font-size: 28px;
+	font-weight: 700;
+	margin-bottom: 8px;
+	text-align: center;
+}
+
+.profile-status {
+	min-height: 20px;
+	margin-bottom: 12px;
+	text-align: center;
+	opacity: 0.9;
+}
+
+.profile-root .stats-grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(180px, 1fr));
+	gap: 12px;
+	margin-top: 12px;
+	margin-bottom: 16px;
+}
+
+.profile-root .stat-card {
+	padding: 12px;
+	border-radius: 10px;
+	background: rgba(255, 255, 255, 0.06);
+}
+
+.profile-root .stat-label {
+	font-size: 13px;
+	opacity: 0.85;
+	margin-bottom: 6px;
+}
+
+.profile-root .stat-value {
+	font-size: 22px;
+	font-weight: 700;
+}

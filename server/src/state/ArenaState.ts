@@ -1,7 +1,8 @@
 import { Schema, MapSchema, type } from "@colyseus/schema";
 
 export class Player extends Schema {
-	@type("string") id = "";
+	@type("string") id = ""; // session id
+	@type("string") userId = ""; // actual db user id
 	@type("string") name = "";
 	@type("string") class = "sword";
 
@@ -22,6 +23,16 @@ export class Player extends Schema {
 
 	@type("number") damageMultiplierPct = 100;
 	@type("number") damageBoostUntil = 0;
+
+	// runtime stat tracking
+	@type("number") score = 0;
+	@type("number") kills = 0;
+	@type("number") powerUpsCollected = 0;
+	@type("number") roundSurvived = 0;
+	@type("number") runStartedAt = 0;
+
+	// helper flag to avoid double-saving
+	@type("boolean") statsCommitted = false;
 }
 
 export class Enemy extends Schema {
