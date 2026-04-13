@@ -1,5 +1,8 @@
 # Team Pixel Coliseum
 
+## Final Design Report
+- [Final Design Report](assignments/final-report.md)
+
 ## Team Members
 - **Cameron Estridge** – Computer Science Major  
   Email: [estridcc@mail.uc.edu](mailto:estridcc@mail.uc.edu)
