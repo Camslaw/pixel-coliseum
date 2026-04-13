@@ -18,7 +18,7 @@ For the second phase, we test the full system in an interated environment consis
 **SV1.7** Blackbox.  
 **SV1.8** Functional.  
 **SV1.9** Integration.  
-**SV1.10 Results:** ____.  
+**SV1.10 Results:** Room creation and join operations executed successfully. The server instantiated the room, registered the connecting client, and assigned valid spawn data. Room state inspection confirmed the player was correctly added and synchronized across clients. Test passed.  
 
 ---
 
@@ -32,7 +32,7 @@ For the second phase, we test the full system in an interated environment consis
 **SV2.7** Blackbox.  
 **SV2.8** Functional.  
 **SV2.9** Integration.  
-**SV2.10 Results:** ___.  
+**SV2.10 Results:** Room capacity was enforced correctly. Clients were able to join until the maximum player limit was reached. Additional join attempts were rejected with no impact to existing players. No server errors or state corruption were observed. Test passed. 
 
 ---
 
@@ -46,7 +46,7 @@ For the second phase, we test the full system in an interated environment consis
 **SV3.7** Whitebox.  
 **SV3.8** Functional.  
 **SV3.9** Integration.  
-**SV3.10 Results:** ___.  
+**SV3.10 Results:** Player movement remained consistent across server and observing clients. Server-authoritative updates correctly reconciled predicted client movement. No desynchronization or positional drift was observed during extended movement sequences. Test passed.  
 
 ---
 
@@ -60,7 +60,7 @@ For the second phase, we test the full system in an interated environment consis
 **SV4.7** Whitebox.   
 **SV4.8** Functional.  
 **SV4.9** Unit.  
-**SV4.10 Results:** ___.
+**SV4.10 Results:** Player attacks correctly damaged AI enemies when within valid range. No damage occurred when attacks were outside allowed range. Damage values matched expected calculations and enemy health updates were synchronized across clients. Test passed.
 
 ---
 
@@ -74,7 +74,7 @@ For the second phase, we test the full system in an interated environment consis
 **SV5.7** Whitebox.   
 **SV5.8** Functional.  
 **SV5.9** Integration.   
-**SV5.10 Results:** ___.   
+**SV5.10 Results:** AI enemies successfully applied damage to the player during valid attack intervals. Player health decreased according to configured damage rules. Attack cooldowns and hit detection behaved as expected. Test passed.   
 
 ---
 
@@ -88,7 +88,7 @@ For the second phase, we test the full system in an interated environment consis
 **SV6.7** Whitebox.  
 **SV6.8** Functional.  
 **SV6.9** Integration.  
-**SV6.10 Results** ___.  
+**SV6.10 Results** Reducing player health to zero triggered the expected death state. Player input was disabled and the game-over event was broadcast to clients. Server state transitioned correctly with no additional damage applied post-death. Test passed.  
 
 ---
 
@@ -102,7 +102,7 @@ For the second phase, we test the full system in an interated environment consis
 **SV7.7** Whitebox.  
 **SV7.8** Functional.  
 **SV7.9** Unit.  
-**SV7.10 Results:** ___.  
+**SV7.10 Results:** Score accumulated correctly as enemies were defeated. Score values increased according to scoring rules and persisted during active gameplay. No unexpected resets or incorrect increments were observed. Test passed.  
 
 ---
 
@@ -116,7 +116,7 @@ For the second phase, we test the full system in an interated environment consis
 **SV8.7** Whitebox.  
 **SV8.8** Functional.  
 **SV8.9** Integration.  
-**SV8.10 Results:** ___.  
+**SV8.10 Results:** After player death, score updates ceased immediately. Additional enemy activity did not affect the final score. Score value remained constant and was preserved for persistence. Test passed.  
 
 ---
 
@@ -130,7 +130,7 @@ For the second phase, we test the full system in an interated environment consis
 **AI1.7** Blackbox.  
 **AI1.8** Functional.  
 **AI1.9** Integration.  
-**AI1.10 Results:** ___.  
+**AI1.10 Results:** AI enemies spawned successfully and pursued players using configured AI behavior. Movement toward the nearest player was observed and pathing behaved correctly. No idle or stuck AI instances were detected. Test passed.  
 
 ---
 
@@ -144,7 +144,7 @@ For the second phase, we test the full system in an interated environment consis
 **CH1.7** Blackbox.  
 **CH1.8** Functional.  
 **CH1.9** Integration.  
-**CH1.10 Results:** ___.  
+**CH1.10 Results:** Chat was removed from the game as a feature.  
 
 ---
 
@@ -158,7 +158,7 @@ For the second phase, we test the full system in an interated environment consis
 **CH2.7** Blackbox.  
 **CH2.8** Functional.  
 **CH2.9** Integration.  
-**CH2.10 Results:** ___.   
+**CH2.10 Results:** Chat was removed from the game as a feature.   
 
 ---
 
@@ -172,7 +172,7 @@ For the second phase, we test the full system in an interated environment consis
 **DB1.7** Whitebox.  
 **DB1.8** Functional.  
 **DB1.9** Integration.  
-**DB1.10 Results:** ___.  
+**DB1.10 Results:** Player high score was successfully persisted after death. Database query confirmed the new score replaced the previous value when higher. No duplicate or incorrect records were created. Test passed.  
 
 ---
 
@@ -186,7 +186,7 @@ For the second phase, we test the full system in an interated environment consis
 **DB2.7** Whitebox.  
 **DB2.8** Functional.  
 **DB2.9** Integration.  
-**DB2.10 Results:** ___.  
+**DB2.10 Results:** ELO rating was removed from the game. Statistics updated correctly following session completion. Updated value was stored in the database and retrieved successfully on subsequent login. Calculation and persistence behaved as expected. Test passed.  
 
 ---
 
@@ -200,7 +200,7 @@ For the second phase, we test the full system in an interated environment consis
 **FS1.7** Blackbox.  
 **FS1.8** Functional.  
 **FS1.9** Integration.  
-**FS1.10 Results:** ___.  
+**FS1.10 Results:** Full system operated correctly during end-to-end survival session. Clients connected, gameplay progressed, AI spawned, score accumulated, chat functioned, and death triggered persistence of statistics. No crashes or desynchronization occurred during testing. Test passed.  
 
 ---
 
